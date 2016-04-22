@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
+    <title>Игра</title>
+
+    <link rel="stylesheet" href="/bower_components/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/bower_components/bootstrap/dist/css/bootstrap-theme.css" />
+    <link rel="stylesheet" href="/bower_components/font-awesome/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="/bower_components/bootstrap-notify/css/bootstrap-notify.css" />
+    <link rel="stylesheet" href="/stylesheets/style.css" />
+
+    <script type="text/template" id="template-login-block">
+        <div class="avatar"></div>
+        <div class="form-box">
+            <form method="post" action="/login">
+                <input name="email" type="text" placeholder="Email">
+                <input name="password" type="password" placeholder="Пароль">
+                <button class="btn btn-info btn-block login" type="submit">Войти</button>
+            </form>
+            <a class="link-need-account" href="#">Нужен аккаунт ?</a>
+            <p>Вход через социальные сети</p>
+            <div class="btn-group btn-group-xs">
+                <a class="btn btn-primary" href="/auth/vkontakte"><i class="fa fa-vk"></i></a>
+            </div>
+        </div>
+    </script>
+
+    <script type="text/template" id="template-signup-block">
+        <div class="avatar"></div>
+        <div class="form-box">
+            <form method="post" action="/signup">
+                <input name="email" type="text" placeholder="Email">
+                <input name="password" type="password" placeholder="Пароль">
+                <button class="btn btn-info btn-block login" type="submit">Регистрация</button>
+            </form>
+            <p>Вход через социальные сети</p>
+            <div class="btn-group btn-group-xs">
+                <a class="btn btn-primary" href="/auth/vkontakte"><i class="fa fa-vk"></i></a>
+            </div>
+        </div>
+    </script>
+
+
+    <script type="text/template" id="template-room-block">
+        <h4><%=room.name%></h4>
+        <div>
+            <span>Игроков: <span><%=room.players ? room.players.length : 0%> из <%=room.maxUsers%></span></span>
+            <span>Фигур: <span><%=room.mobs ? room.mobs : 0%> из <%=room.maxMobs%></span></span>
+        </div>
+        <div class="btn-group btn-group-xs">
+            <% if(room._current) { %>
+            <button data-room-id="<%=room._id%>" title="Подключится к игре" class="btn btn-danger btn-xs btn-room-leave">Выйти из игры</button>
+            <% } else { %>
+            <button data-room-id="<%=room._id%>" title="Подключится к игре" class="btn btn-success btn-xs btn-room-join">Войти в игру</button>
+            <% } %>
+            <button data-room-id="<%=room._id%>" title="Подключится к игре" class="btn btn-warning btn-xs btn-room-donate">Купить еденицы</button>
+        </div>
+    </script>
+
+    <script type="text/template" id="template-room-list-block">
+        <h4>Список комнат</h4>
+        <table class="table list">
+            <thead>
+            <tr>
+                <th>#</th>
+                <th>Игроки</th>
+                <th>Фигруы</th>
+                <th>Войти</th>
+            </tr>
+            </thead>
+            <tbody>
+            <% rooms.forEach(function(room){ %>
+            <tr>
+                <td><%=room.name%></td>
+                <td><%=room.players.length%> из <%=room.maxUsers%></td>
+                <td><%=room.mobs%> из <%=room.maxMobs%></td>
+                <td>
+                    <div class="btn-group btn-group-xs">
+                        <% if( room._current ) { %>
+                        <button data-room-id="<%=room._id%>" title="Продолжить" class="btn btn-success btn-room-continue"><i class="fa fa-play"></i></button>
+                        <button data-room-id="<%=room._id%>" title="Выйти из игры" class="btn btn-danger btn-room-leave"><i class="fa fa-sign-out"></i></button>
+                        <% } else { %>
+                        <button data-room-id="<%=room._id%>" title="Подключится к игре" class="btn btn-primary btn-room-join"><i class="fa fa-play-circle-o"></i></button>
+                        <% } %>
+                    </div>
+                </td>
+            </tr>
+            <% }); %>
+            </tbody>
+        </table>
+        <div class="btn-group btn-group-sm">
+            <a title="Топ игроков" href="#" class="btn btn-primary btn-players-top">Игроки</a>
+            <a title="Пополнить счет" href="#" class="btn btn-warning btn-donate">Купить $</a>
+            <a title="Выйти из приложения" href="/logout" class="btn btn-danger btn-exit">Выход</a>
+        </div>
+    </script>
+
+    <script type="text/template" id="template-user-top-block">
+        <h4>Топ игроков</h4>
+        <div class="list container">
+            <% users.forEach(function(user){ %>
+            <div class="list-item list-item-player-top">
+                <div class="avatar-list-item pull-left"></div>
+                <h4><%=user.displayName%></h4>
+                <h5>Счет: <%=user.score%></h5>
+            </div>
+            <% }); %>
+        </div>
+        <div class="btn-group btn-group-sm">
+            <a title="Список комнат" href="#" class="btn btn-primary btn-room-list">Комнаты</a>
+            <a title="Пополнить счет" href="#" class="btn btn-warning btn-donate">Купить $</a>
+            <a title="Выйти из приложения" href="/logout" class="btn btn-danger btn-exit">Выход</a>
+        </div>
+    </script>
+
+    <script type="text/template" id="template-user-card-block">
+        <div class="avatar" style="background:url(<%=user.photo%>) no-repeat center"></div>
+        <h4 class="displayName"><%=user.displayName%>&nbsp;<i class="fa fa-edit btn btn-success btn-xs btn-edit-name"></i></h4>
+        <input class="input-displayName" />
+        <div class="balance">
+            <span>$<%=user.balance%><button title="Пополнить счет" type="button" class="btn btn-warning btn-xs btn-donate">Пополнить</button></span>
+        </div>
+        <div class="btn-group btn-group-xs">
+        <% if(user.role === 'admin') { %>
+            <button title="Настройки" type="button" class="btn btn-admin-settings"><i class="fa fa-wrench"></i></button>
+        <% } %>
+            <a title="Выход" href="/logout" class="btn btn-danger btn-logout">Выход</a>
+        </div>
+    </script>
+
+    <script type="text/template" id="template-room-user-list-block">
+        <h4>Топ игроков</h4>
+        <ol>
+            <% room.users.forEach(function(user){ %>
+            <li><%=user.displayName%></li>
+            <% }); %>
+        </ol>
+    </script>
+
+    <script type="text/template" id="template-admin-room-block">
+        <h4>Управление</h4>
+        <table class="table list">
+            <thead>
+            <tr>
+                <th>Комната</th>
+                <th>Действия</th>
+            </tr>
+            </thead>
+            <tbody>
+            <% rooms.forEach(function(room){ %>
+            <tr>
+                <td><%=room.name%> (<%=room.players.length%>, <%=room.mobs%>)</td>
+                <td>
+                    <div class="btn-group btn-group-xs">
+                        <button title="Удалить комнату" class="btn btn-primary btn-room-remove"><i class="fa fa-remove"></i></button>
+                        <button title="Остановить игру" class="btn btn-warning btn-room-stop"><i class="fa fa-stop"></i></button>
+                        <button title="Перезапуск игры" class="btn btn-danger btn-room-restart"><i class="fa fa-refresh"></i></button>
+                    </div>
+                </td>
+            </tr>
+            <% }); %>
+            </tbody>
+        </table>
+        <h4>Создать комнату</h4>
+        <form class="form-add-room" method="post" action="/api/v1/rooms">
+            <input name="name" type="text" placeholder="Название">
+            <input name="complexity" type="text" placeholder="Сложность">
+            <input name="maxUsers" type="text" placeholder="Маск. игроков">
+            <input name="maxMobs" type="text" placeholder="Маск. фигур">
+            <input name="spawnSpeed" type="text" placeholder="Скорость появления фигур">
+            <button class="btn btn-info btn-block login" type="submit">Создать</button>
+        </form>
+        <div class="btn-group btn-group-sm">
+            <a title="Список комнат" href="#" class="btn btn-primary btn-players-top">Комнаты</a>
+            <a title="Топ игроков" href="#" class="btn btn-warning btn-donate">Игроки</a>
+            <a title="Выйти из приложения" href="/logout" class="btn btn-danger btn-exit">Выход</a>
+        </div>
+    </script>
+
+    <script type="text/template" id="template-room-admin-block">
+        <h4>Управление комнатой:<span><%=room.name%></span></h4>
+        <form class="form-room-settings">
+            <div><span>Название&nbsp;</span><input type="text" name="name" value="<%=room.name%>"/></div>
+            <div><span>Сложность&nbsp;</span><input type="text" name="complexity" value="<%=room.complexity%>"/></div>
+            <div><span>Макс.игроков&nbsp;</span><input type="text" name="maxUsers" value="<%=room.maxUsers%>"/></div>
+            <div><span>Макс.фигур&nbsp;</span><input type="text" name="maxMobs" value="<%=room.maxMobs%>"/></div>
+            <div><span>Скорость спавна&nbsp;</span><input type="text" name="spawnSpeed" value="<%=room.spawnSpeed%>"/></div>
+            <div><span>% Положительных&nbsp;</span><input type="text" name="percent_profit" value="<%=room.percent_profit%>"/></div>
+            <div><span>% Нейтральных&nbsp;</span><input type="text" name="percent_null" value="<%=room.percent_null%>"/></div>
+            <div><span>% Отрицательных&nbsp;</span><input type="text" name="percent_minus" value="<%=room.percent_minus%>"/></div>
+            <div><button type="button" class="btn btn-danger btn-save-room">Сохранить</button></div>
+        </form>
+        <!--
+        <h4>Добавление фигур</h4>
+        <form class="form-spawn">
+            <input type="text" name="maxMobs" value="1"/>
+            <input type="text" name="percent_profit" value="30"/>
+            <input type="text" name="percent_null" value="20"/>
+            <input type="text" name="percent_minus" value="50"/>
+            <button type="button" class="btn btn-danger btn-spawn">Добавить</button>
+        </form>
+        -->
+    </script>
+
+
+    <script type="application/javascript" src="/bower_components/jquery/dist/jquery.min.js"></script>
+    <script type="application/javascript" src="/bower_components/underscore/underscore-min.js"></script>
+    <script type="application/javascript" src="/bower_components/backbone/backbone-min.js"></script>
+    <script type="application/javascript" src="/bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+    <script type="application/javascript" src="/bower_components/remarkable-bootstrap-notify/dist/bootstrap-notify.min.js"></script>
+    <script type="application/javascript" src="/bower_components/box2dweb/Box2d.min.js"></script>
+    <script type="application/javascript" src="/bower_components/EaselJS/lib/easeljs-0.8.2.min.js"></script>
+    <script type="application/javascript" src="/bower_components/bootstrap-notify/js/bootstrap-notify.js"></script>
+
+    <script type="application/javascript" src="/javascripts/views.js"></script>
+    <script type="application/javascript" src="/javascripts/models.js"></script>
+    <script type="application/javascript" src="/javascripts/game.js"></script>
+    <script type="application/javascript" src="/javascripts/app.js"></script>
+</head>
+<body>
+<div class="hud-ui"></div>
+<div class="info-block-container"></div>
+
+<div class="game-field-container"></div>
+<div class="game-field-debug-container"></div>
+</body>
+</html>
