@@ -101,11 +101,11 @@ function startRoomProcess(room, callback) {
         game    = spawn('node', ['./game.daemon.js', id , startPort]);
 
     game.stdout.on('data', function (data) {
-        console.log('stdout: ' + data);
+        console.log('' + data);
     });
 
     game.stderr.on('data', function (data) {
-        console.log('stderr: ' + data);
+        console.log('' + data);
     });
 
     game.on('exit', function (code) {
@@ -269,7 +269,7 @@ app.put([ API_PREFIX + "rooms/:id" ], isAuthenticatedAdmin, function(req, res) {
         return provideHttp(res, err, model);
     });
 });
-
+/*
 app.put([ API_PREFIX + "rooms/:id/stop" ], isAuthenticatedAdmin, function(req, res) {
     res.end();
 });
@@ -281,6 +281,6 @@ app.put([ API_PREFIX + "rooms/:id/restart" ], isAuthenticatedAdmin, function(req
 app.delete([ API_PREFIX + "rooms/:id" ], isAuthenticatedAdmin, function(req, res) {
     res.end();
 });
-
+*/
 
 server.listen("3004", "localhost");

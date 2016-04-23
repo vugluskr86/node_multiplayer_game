@@ -70,8 +70,8 @@ function Mob(id, options, optionId) {
     this.options = options;
 
     this.center = {
-        x : _.random(-500, 500),
-        y : _.random(-500, 500)
+        x : _.random(-1000, 1000),
+        y : _.random(-1000, 1000)
     };
 
     this.life = _.random(0, 2 * Math.PI);
@@ -83,8 +83,8 @@ function Mob(id, options, optionId) {
 }
 
 Mob.prototype.update = function(dt) {
-    this.x = this.center.x + Math.sin(this.life) * this.r_x;
-    this.y = this.center.y + Math.cos(this.life) * this.r_y;
+    this.x = this.center.x + Math.sin(this.life) * this.r_x * Math.sin(this.life);
+    this.y = this.center.y + Math.cos(this.life) * this.r_y * Math.sin(this.life);
     this.life += dt / 1000 * this.speed;
 };
 
@@ -121,6 +121,8 @@ RoomMobs.prototype.spawnMobs = function(x,y,angle,options) {
     this.mobsOptions.push(_mob);
     this.mobs.push(mob);
 
+    mob.update(1/60);
+
     return {
         options : _mob,
         data : mob
@@ -130,12 +132,10 @@ RoomMobs.prototype.spawnMobs = function(x,y,angle,options) {
 RoomMobs.prototype.removeMob = function(id) {
     var mob_idx = _.findIndex(this.mobs, { id : id });
     if( mob_idx !== -1 ) {
-        console.log('mob_idx', mob_idx);
         var mob = this.mobs[mob_idx];
         this.mobs.splice(mob_idx, 1);
         var opt_idx = _.findIndex(this.mobsOptions, { id : mob.optionId });
         if( opt_idx !== -1 ) {
-            console.log('opt_idx', opt_idx);
             this.mobsOptions.splice(opt_idx, 1);
 
             return true;
@@ -148,7 +148,6 @@ RoomMobs.prototype.removeMob = function(id) {
 RoomMobs.prototype.findMob = function(id) {
     var mob_idx = _.findIndex(this.mobs, { id : id });
     if( mob_idx !== -1 ) {
-        console.log('mob_idx', mob_idx);
         var mob = this.mobs[mob_idx];
         var opt_idx = _.findIndex(this.mobsOptions, { id : mob.optionId });
         if( opt_idx !== -1 ) {
@@ -194,7 +193,7 @@ Client.prototype.message = function(message) {
                     }
 
                     // проверяем наличие денег
-                    if( this.user.balance < mob.cost ) {
+                    if( this.user.balance < mob.prototype.cost ) {
                         this.send(JSON.stringify({
                             id : "error",
                             message : "NotMoney"
@@ -318,6 +317,25 @@ Room.prototype.load = function(callback) {
         room.mobs = 0;
         this.roomData = room;
 
+        // this.roomData.percent_profit
+        // this.roomData.percent_null
+        // this.roomData.percent_minus
+
+        this.randSeq = [];
+
+        for(var i = 0; i < this.roomData.percent_profit; i++) {
+            this.randSeq.push(1);
+        }
+        for(var j = 0; j < this.roomData.percent_null; j++) {
+            this.randSeq.push(0);
+        }
+        for(var q = 0; q < this.roomData.percent_minus; q++) {
+            this.randSeq.push(-1);
+        }
+
+       // console.log(this.randSeq.length)
+
+
         this.roomData.save(function(err){
             if( err ) {
                 return callback(err);
@@ -325,8 +343,6 @@ Room.prototype.load = function(callback) {
 
             this.roomInterval = setInterval(this.update.bind(this, 1000 / 60), 1000 / 60);
             this.spawnInterval = setInterval(this.workSpawn.bind(this), this.roomData.spawnSpeed * 1000);
-
-            console.log("START", this.roomData.spawnSpeed);
 
             return callback(null);
         }.bind(this));
@@ -400,28 +416,48 @@ Room.prototype.broadcast = function(message) {
 };
 
 Room.prototype.spawnMob = function() {
+
+    var _rand = _.random(0, 99),
+        _profitMode = this.randSeq[_rand];
+
+    // this.roomData.percent_profit
+    // this.roomData.percent_null
+    // this.roomData.percent_minus
+
     var _h = _.random(5, 500),
+        type = _.random(0, 1) > 0.2 ? "box" : "circle",
+        radius = _.random(10, 200),
         _x = _.random(0.51, 0.53),
         _cost =  parseInt(_.random(5, 500)),
-        _profit = parseInt(_.random(-100, 100));
+        _profit = parseInt(_.random(1, 100)) * _profitMode,
+        view = {};
+
+    if(type === "box") {
+        view = {
+            type : "box",
+            width  : _h * _x,
+            height : _h * (1 - _x),
+            fill : COLOR_skySample[_.random(0, COLOR_skySample.length - 1)],
+            strokeStyle : _.random(1, 10),
+            stroke : COLOR_rainbow[_.random(0, COLOR_rainbow.length - 1)]
+        };
+    } else {
+        view = {
+            type : "circle",
+            radius : radius,
+            fill : COLOR_skySample[_.random(0, COLOR_skySample.length - 1)],
+            strokeStyle : _.random(1, 10),
+            stroke : COLOR_rainbow[_.random(0, COLOR_rainbow.length - 1)]
+        };
+    }
+
+
     return room.mobs.spawnMobs(_.random(-500, 500), _.random(-500, 500), _.random(0, 2 * Math.PI), {
         text : _cost + "/" + _profit,
         prototype : {
             cost : _cost,
             profit : _profit,
-            physic : {
-                shape : 'b2PolygonShape',
-                width  : _h * _x,
-                height : _h * (1 - _x)
-            },
-            view : {
-                type : "box",
-                width  : _h * _x,
-                height : _h * (1 - _x),
-                fill : COLOR_skySample[_.random(0, COLOR_skySample.length - 1)],
-                strokeStyle : _.random(1, 10),
-                stroke : COLOR_rainbow[_.random(0, COLOR_rainbow.length - 1)]
-            }
+            view : view
         }
     });
 };
@@ -484,7 +520,6 @@ room.load(function(err) {
     pubsubClient.subscribe('ch_rooms_update');
 
     pubsubClient.on('message', function(channel, message){
-       // console.log(channel, message);
         var _msg = JSON.parse(message);
         if( channel === 'ch_rooms_update' && _msg.id === room.id ) {
             room.updateInfo(_msg);

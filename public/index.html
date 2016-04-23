@@ -50,11 +50,12 @@
         </div>
         <div class="btn-group btn-group-xs">
             <% if(room._current) { %>
-            <button data-room-id="<%=room._id%>" title="Подключится к игре" class="btn btn-danger btn-xs btn-room-leave">Выйти из игры</button>
+            <button data-room-id="<%=room._id%>" title="Подключится к игре" class="btn btn-danger btn-xs btn-room-leave">Отключится</button>
             <% } else { %>
-            <button data-room-id="<%=room._id%>" title="Подключится к игре" class="btn btn-success btn-xs btn-room-join">Войти в игру</button>
+            <button data-room-id="<%=room._id%>" title="Подключится к игре" class="btn btn-success btn-xs btn-room-join">Играть</button>
             <% } %>
             <button data-room-id="<%=room._id%>" title="Подключится к игре" class="btn btn-warning btn-xs btn-room-donate">Купить еденицы</button>
+            <a title="Выход" href="/logout" class="btn btn-danger btn-logout btn-xs">Выход</a>
         </div>
     </script>
 
@@ -117,16 +118,15 @@
     <script type="text/template" id="template-user-card-block">
         <div class="avatar" style="background:url(<%=user.photo%>) no-repeat center"></div>
         <h4 class="displayName"><%=user.displayName%>&nbsp;<i class="fa fa-edit btn btn-success btn-xs btn-edit-name"></i></h4>
-        <input class="input-displayName" />
-        <div class="balance">
-            <span>$<%=user.balance%><button title="Пополнить счет" type="button" class="btn btn-warning btn-xs btn-donate">Пополнить</button></span>
-        </div>
+        <input class="form-control input-displayName input-sm" />
+        <div class="balance"><strong>$<%=user.balance%></strong></div>
         <div class="btn-group btn-group-xs">
-        <% if(user.role === 'admin') { %>
-            <button title="Настройки" type="button" class="btn btn-admin-settings"><i class="fa fa-wrench"></i></button>
-        <% } %>
-            <a title="Выход" href="/logout" class="btn btn-danger btn-logout">Выход</a>
+            <a title="Пополнить счет" type="button" class="btn btn-success btn-xs btn-donate">Пополнить</a>
+            <a title="Пополнить счет" type="button" class="btn btn-danger btn-xs btn-donate">Вывести</a>
         </div>
+        <% if(user.role === 'admin') { %>
+        <button title="Настройки" type="button" class="btn btn-admin-settings btn-xs"><i class="fa fa-wrench"></i></button>
+        <% } %>
     </script>
 
     <script type="text/template" id="template-room-user-list-block">
@@ -203,6 +203,19 @@
         -->
     </script>
 
+    <script type="text/template" id="template-top-view">
+        <h4>Топ игроков</h4>
+        <ol>
+            <% users.forEach(function(user){ %>
+            <li><%=user.displayName%> : <%=user.balance%></li>
+            <% }); %>
+        </ol>
+    </script>
+
+    <script type="text/template" id="template-profile-view">
+        <h4>Профиль</h4>
+    </script>
+
 
     <script type="application/javascript" src="/bower_components/jquery/dist/jquery.min.js"></script>
     <script type="application/javascript" src="/bower_components/underscore/underscore-min.js"></script>
@@ -212,6 +225,7 @@
     <script type="application/javascript" src="/bower_components/box2dweb/Box2d.min.js"></script>
     <script type="application/javascript" src="/bower_components/EaselJS/lib/easeljs-0.8.2.min.js"></script>
     <script type="application/javascript" src="/bower_components/bootstrap-notify/js/bootstrap-notify.js"></script>
+    <script type="application/javascript" src="/bower_components/reconnectingWebsocket/reconnecting-websocket.min.js"></script>
 
     <script type="application/javascript" src="/javascripts/views.js"></script>
     <script type="application/javascript" src="/javascripts/models.js"></script>

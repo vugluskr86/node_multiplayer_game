@@ -23,7 +23,11 @@
         events: {
             "mousemove": "_handleMouseMove",
             "mouseup": "_handleMouseUp",
-            "mousedown": "_handleMouseDown"
+            "mousedown": "_handleMouseDown",
+
+            "touchmove": "_handleMouseMove",
+            "touchend": "_handleMouseUp",
+            "touchstart": "_handleMouseDown"
         },
 
         mouseDown: false,
@@ -98,7 +102,7 @@
 
                 gfx.clear();
 
-                gfx.beginFill("#eee");
+                gfx.beginFill("#fefefe");
                 gfx.drawRect(0, 0, this.canvas.width, this.canvas.height);
 
                 var width = this.canvas.width;
@@ -233,7 +237,22 @@
                 t2.outline = false;
                 t2.color = "#fff";
 
-                var fontSize = parseInt(object.prototype.view.width / 2.3);
+
+                var fontSize = 16;
+
+                switch (object.prototype.view.type) {
+                    case "box" :
+                    {
+                        fontSize = parseInt(object.prototype.view.width / 2.3);
+                        break;
+                    }
+                    case "circle" :
+                    {
+                        fontSize = parseInt(object.prototype.view.radius / 2.3);
+                        break;
+                    }
+                }
+
                 const fontMinSize = 16;
                 if( fontSize < fontMinSize ) {
                     fontSize = fontMinSize;

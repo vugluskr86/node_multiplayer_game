@@ -7,13 +7,18 @@
         },
 
         initialize: function(options) {
+
+            _.bindAll(this, '_handleResizeWindow');
+
             this.options = {
                 width : 320,
-                height : 200
+                height : 200,
+                margin : 0
             };
             _.extend(this.options, options || {});
 
-            $(window).on('resize', this._handleResizeWindow);
+
+            $(window).on('resize', this._handleResizeWindow.bind(this));
             this._handleResizeWindow();
         },
 
@@ -21,23 +26,40 @@
             switch (this.options.valign) {
                 case "top":
                 {
-                    this.top = 0;
+                    this.top = this.options.margin;
                     break;
                 }
                 case "bottom":
                 {
-                    this.top = window.innerHeight - this.options.height / 2;
+                    this.top = window.innerHeight - this.options.height - this.options.margin;
                     break;
                 }
                 case "center":
                 default:
                 {
-                    this.top = window.innerHeight / 2 - this.options.height / 2;
+                    this.top = (window.innerHeight / 2) - (this.options.height / 2);
                     break;
                 }
             }
 
-            this.left = window.innerWidth / 2 - this.options.width / 2;
+            switch (this.options.align) {
+                case "left":
+                {
+                    this.top = this.options.margin;
+                    break;
+                }
+                case "right":
+                {
+                    this.left = window.innerWidth - this.options.width - this.options.margin;
+                    break;
+                }
+                case "center":
+                default:
+                {
+                    this.left = window.innerWidth / 2 - this.options.width / 2;
+                    break;
+                }
+            }
 
             this.$el.css({
                 'width': this.options.width + 'px',
@@ -60,7 +82,7 @@
             initialize: function(options) {
                 this.__proto__.constructor.__super__.initialize.apply(this, arguments);
 
-                _.bindAll(this, '_handleNeedAccountClick');
+                _.bindAll(this, '_handleNeedAccountClick', 'render');
 
                 this.template = _.template( $('#template-login-block').html() );
 
@@ -81,6 +103,8 @@
             initialize: function(options) {
                 this.__proto__.constructor.__super__.initialize.apply(this, arguments);
 
+                _.bindAll(this, 'render');
+
                 this.template = _.template( $('#template-signup-block').html() );
 
                 this.render();
@@ -91,105 +115,9 @@
             }
         }),
 
-
-        RoomListView : Backbone.View.extend({
+        UserCardView : WindowView.extend({
             attributes : {
-                "class" : "block-container"
-            },
-
-            events: {
-                "click .btn-players-top" : "_handleBtnPlayersTopClick",
-                "click .btn-donate" : "_handleBtnDonateClick",
-        //        "click .btn-exit" : "_handleBtnExitClick",
-                "click .btn-room-join" : "_handleRoomEnterClick",
-                "click .btn-room-leave" : "_handleRoomLeaveClick",
-                "click .btn-room-continue" : "_handleRoomContinueClick"
-            },
-
-            initialize: function(options) {
-                _.bindAll(this,
-                    '_handleRoomsChange', '_handleBtnPlayersTopClick', '_handleBtnDonateClick',
-                    '_handleBtnExitClick', '_handleRoomEnterClick', '_handleResizeWindow',
-                    '_handleRoomLeaveClick', '_handleRoomContinueClick');
-
-                this.width = 320;
-                this.height = 400;
-
-                this.options = options;
-
-                this.template = _.template( $('#template-room-list-block').html() );
-
-                this.collection.listenTo(this.collection, 'sync reset change add remove', this._handleRoomsChange);
-
-                $(window).on('resize', this._handleResizeWindow);
-                this._handleResizeWindow();
-
-                this.render();
-            },
-
-            render: function() {
-                var rooms = this.collection.toJSON().map(function(room) {
-                    if( this.model.isAuthenticated() && room._id === this.model.get("currentRoom") ) {
-                        _.extend(room, { _current : true })
-                    }
-                    return room;
-                }.bind(this));
-
-                this.$el.html( this.template({ rooms : rooms }) );
-            },
-
-            _handleResizeWindow: function() {
-                this.top = window.innerHeight / 2 - this.height / 2;
-                this.left = window.innerWidth / 2 - this.width / 2;
-
-                this.$el.css({
-                    'width': this.width + 'px',
-                    'height': this.height + 'px',
-                    'top':  this.top + 'px',
-                    'left': this.left + 'px',
-                    'position': 'absolute',
-                    'z-index' : '1000'
-                });
-            },
-
-            _handleRoomsChange: function() {
-               this.render();
-            },
-
-            _handleBtnPlayersTopClick : function(e) {
-                e.preventDefault();
-            },
-
-            _handleBtnDonateClick: function(e) {
-                e.preventDefault();
-            },
-
-            _handleBtnExitClick: function(e) {
-                e.preventDefault();
-            },
-
-            _handleRoomEnterClick: function(e) {
-                e.preventDefault();
-                var id = $(e.currentTarget).data('room-id');
-                this.trigger('join-room', id);
-            },
-
-            _handleRoomLeaveClick: function(e) {
-                e.preventDefault();
-                var id = $(e.currentTarget).data('room-id');
-                this.trigger('leave-room', id);
-            },
-
-            _handleRoomContinueClick: function(e) {
-                e.preventDefault();
-                var id = $(e.currentTarget).data('room-id');
-                this.trigger('continue-room', id);
-            }
-        }),
-
-        UserCardView : Backbone.View.extend({
-            attributes : {
-                "class" : "user-card"
+                "class" : "block-container user-card"
             },
 
             events: {
@@ -199,6 +127,8 @@
             },
 
             initialize: function(options) {
+                this.__proto__.constructor.__super__.initialize.apply(this, arguments);
+
                 _.bindAll(this, '_handleUserChange', '_handleClickAdminSettings', '_handleClickRoomList', '_handleClickEditName');
 
                 this.options = options;
@@ -212,12 +142,7 @@
                 this.$el.html( this.template( { user : this.model.toJSON() } ) );
 
                 this.$inputEditName = this.$el.find('.input-displayName');
-
                 this.$inputEditName.hide();
-
-                if( this.model.get('auth') ) {
-                    this.$el.show();
-                }
             },
 
             _handleUserChange: function() {
@@ -256,19 +181,17 @@
 
                     var _name = this.$inputEditName.val();
 
+                    this.$inputEditName.hide();
+
+                    $nameBlock.find('.btn-edit-name').removeClass('fa-save');
+                    $nameBlock.find('.btn-edit-name').addClass('fa-edit');
+
+                    $nameBlock.find('.btn-edit-name').removeClass('btn-danger');
+                    $nameBlock.find('.btn-edit-name').addClass('btn-success');
+
+                    $nameBlock.data('state', false);
+
                     if( _name && _name.length >= 3 ) {
-
-                        this.$inputEditName.hide();
-
-                        $nameBlock.find('.btn-edit-name').removeClass('fa-save');
-                        $nameBlock.find('.btn-edit-name').addClass('fa-edit');
-
-                        $nameBlock.find('.btn-edit-name').removeClass('btn-danger');
-                        $nameBlock.find('.btn-edit-name').addClass('btn-success');
-
-                        $nameBlock.data('state', false);
-
-
                         this.model.save({
                             displayName : this.$inputEditName.val()
                         });
@@ -277,31 +200,6 @@
             }
         }),
 
-        RoomUserListView : Backbone.View.extend({
-            attributes : {
-                "class" : "room-user-list"
-            },
-
-            events: {},
-
-            initialize: function(options) {
-                _.bindAll(this, '_handleTopChange');
-
-                this.options = options;
-
-                this.template = _.template( $('#template-room-user-list-block').html() );
-
-                this.model.listenTo(this.model, 'change:users', this._handleTopChange);
-            },
-
-            render: function() {
-                this.$el.html( this.template({ room : this.collection.toJSON() }) );
-            },
-
-            _handleTopChange : function() {
-                this.render();
-            }
-        }),
 
         AdminRoomView: Backbone.View.extend({
             attributes : {
@@ -499,6 +397,31 @@
                 this.$el.notify(message.toJSON()).show(); // for the ones that aren't closable and don't fade out there is a .hide() function.
 
                 this.collection.reset([]);
+            }
+        }),
+
+        TopView : WindowView.extend({
+
+            attributes: {
+                "class" : "room-user-list block-container"
+            },
+
+            initialize: function(options) {
+                this.__proto__.constructor.__super__.initialize.apply(this, arguments);
+
+                console.log(options)
+
+                _.bindAll(this, 'render');
+
+                this.template = _.template( $('#template-top-view').html() );
+
+                this.collection.listenTo(this.collection, 'reset', this.render);
+
+                this.render();
+            },
+
+            render: function() {
+                this.$el.html( this.template({ users : this.collection.toJSON() }) );
             }
         })
     };

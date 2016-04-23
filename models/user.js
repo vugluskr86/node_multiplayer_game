@@ -4,7 +4,7 @@ var bcrypt   = require('bcrypt-nodejs');
 var userSchema = mongoose.Schema({
     displayName: {type: String},
     photo: {type: String, default: '/images/ph_avatar.jpg'},
-    balance: {type: Number, default: 1000},
+    balance: {type: Number, default: 10000},
     currentRoom: {type: mongoose.Schema.Types.ObjectId, ref: 'Room'},
     role: { type: String },
 

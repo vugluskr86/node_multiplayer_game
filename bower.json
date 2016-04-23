@@ -29,6 +29,7 @@
     "socket.io": "^1.4.5",
     "socket.io-client": "^1.4.5",
     "font-awesome": "fontawesome#^4.6.1",
-    "websocket": "^1.1.2"
+    "websocket": "^1.1.2",
+    "reconnectingWebsocket": "https://github.com/joewalnes/reconnecting-websocket.git#^1.0.0"
   }
 }

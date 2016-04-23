@@ -1,12 +1,5 @@
 (function() {
 
-    // TODO
-    // API Http ( REST )
-    // Коллекция комнат /api/v1/rooms
-    // Модель комнаты   /api/v1/room/:id
-    // Модель игрока    /api/v1/user, /api/v1/user/:id
-    // Коллекция топа   /api/v1/top/:id
-
     const API_PREFIX = "/api/v1/";
 
     var MobModel = Backbone.Model.extend({
@@ -46,7 +39,7 @@
 
         initialize : function() {
             _.bindAll(this, 'subscribe', 'join', 'leave', 'click', '_connect',
-                '_handleSocketMessage', '_handleClose', '_handleError', '_handleOpen', '_retryConnect');
+                '_handleSocketMessage', '_handleClose', '_handleError', '_handleOpen');
         },
 
         join: function( options ) {
@@ -118,6 +111,11 @@
                         this.trigger('UserBalanceUpdated');
                         break;
                     }
+                    case "error": {
+                        //console.log(packet)
+                        this.trigger('ErrorMessage', packet.message);
+                        break;
+                    }
                 }
             }
         },
@@ -125,13 +123,11 @@
         _connect: function(roomId) {
             if( this.socket ) {
                 this.socket.close();
-
                 this.mobs.reset([]);
-
                 this.trigger('clear');
             }
 
-            this.socket = new WebSocket("ws://test10.tests.onalone.com//rooms/" + roomId);
+            this.socket = new ReconnectingWebSocket("ws://test10.tests.onalone.com//rooms/" + roomId);
             this.socket.onmessage = this._handleSocketMessage;
             this.socket.onclose = this._handleClose;
             this.socket.onerror = this._handleError;
@@ -139,24 +135,17 @@
         },
 
         _handleClose: function(event) {
-            if( this._connectState === 'RECONNECT' ) {
-
+            if (event.wasClean) {
+                this._connectState = 'CLOSED';
+                console.log('Соединение закрыто чисто');
             } else {
-                if (event.wasClean) {
-                    this._connectState = 'CLOSED';
-                    console.log('Соединение закрыто чисто');
-                } else {
-                    this._connectState = 'BROKEN';
-                    console.log('Обрыв соединения');
-                }
-                console.log('Код: ' + event.code + ' причина: ' + event.reason)
-                this._retryConnect();
+                this._connectState = 'BROKEN';
+                console.log('Обрыв соединения');
             }
-
         },
 
         _handleError: function(error) {
-            console.log("Ошибка " + error.message);
+            console.log("Ошибка ", error);
             this._connectState = 'ERROR';
         },
 
@@ -164,16 +153,6 @@
             this._connectState = 'CONNECTED';
         },
 
-        _retryConnect: function() {
-            this._connectState = 'RECONNECT';
-            this._retryInterval = setInterval(function() {
-                if( this._connectState === 'CONNECTED' ) {
-                    clearInterval(this._retryInterval);
-                } else {
-                   // this._connect();
-                }
-            }.bind(this), 1000);
-        },
 
         click: function(mobId) {
             if( this._connectState === 'CONNECTED' ) {
@@ -228,10 +207,15 @@
         }
     });
 
+    var TopCollection = Backbone.Collection.extend({
+        url : API_PREFIX + "top",
+    });
+
     window.DataModule = {
         RoomModel : RoomModel,
         RoomsCollection : RoomsCollection,
         UserModel : UserModel,
-        UsersCollection : UsersCollection
+        UsersCollection : UsersCollection,
+        TopCollection : TopCollection
     };
 })();

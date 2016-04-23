@@ -104,7 +104,10 @@ app.get([ API_PREFIX + "users/:id" ], function(req, res) {
         return res.status("403").json({ message : "InvalidId" });
     }
 
-    return UserModel.findOne({ _id : req.params.id }).exec(provideHttp.bind(null, res));
+    return UserModel
+        .findOne({ _id : req.params.id })
+        .select('id displayName photo balance currentRoom role')
+        .exec(provideHttp.bind(null, res));
 });
 
 app.post([ API_PREFIX + "users" ], isAuthenticated, function(req, res) {
@@ -112,7 +115,21 @@ app.post([ API_PREFIX + "users" ], isAuthenticated, function(req, res) {
         return res.status("403").json({ message : "InvalidParams" });
     }
 
-    return UserModel.update({ _id : req.body._id }, { displayName : req.body.displayName }).exec(provideHttp.bind(null, res));
+    return UserModel
+        .update({ _id : req.body._id }, { displayName : req.body.displayName })
+        .select('id displayName photo balance currentRoom role')
+        .exec(provideHttp.bind(null, res));
+});
+
+
+app.get([ API_PREFIX + "top" ], function(req, res) {
+
+    return UserModel
+        .find({ })
+        .select('id displayName photo balance currentRoom role')
+        .sort({ balance : -1 })
+        .limit(6)
+        .exec(provideHttp.bind(null, res));
 });
 
 server.listen("3002", "localhost");

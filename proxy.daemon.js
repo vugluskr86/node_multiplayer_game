@@ -20,6 +20,11 @@ var server = http.createServer(function(req, res) {
         return proxy.web(req, res, { target: 'http://localhost:3002' });
     }
 
+    if( req.url.indexOf('/api/v1/top') === 0 ) {
+        return proxy.web(req, res, { target: 'http://localhost:3002' });
+    }
+
+
     if( req.url.indexOf('/api/v1/rooms') === 0 ) {
         return proxy.web(req, res, { target: 'http://localhost:3004' });
     }
