@@ -11,25 +11,31 @@ var RoomModel = require('./models/room');
 var proxy = httpProxy.createProxyServer({
     target: {
         host: 'localhost',
-        port: 3001
+        port: 4002
     }
 });
 
 var server = http.createServer(function(req, res) {
     if( req.url.indexOf('/api/v1/users') === 0 ) {
-        return proxy.web(req, res, { target: 'http://localhost:3002' });
+        return proxy.web(req, res, { target: 'http://localhost:4005' });
     }
 
     if( req.url.indexOf('/api/v1/top') === 0 ) {
-        return proxy.web(req, res, { target: 'http://localhost:3002' });
+        return proxy.web(req, res, { target: 'http://localhost:4005' });
     }
-
 
     if( req.url.indexOf('/api/v1/rooms') === 0 ) {
-        return proxy.web(req, res, { target: 'http://localhost:3004' });
+        return proxy.web(req, res, { target: 'http://localhost:4004' });
     }
 
-    proxy.web(req, res, { target: 'http://localhost:3001' });
+    if( req.url.indexOf('/api/v1/invoices') === 0 ) {
+        return proxy.web(req, res, { target: 'http://localhost:4001' });
+    }
+    if( req.url.indexOf('/api/v1/payouts') === 0 ) {
+        return proxy.web(req, res, { target: 'http://localhost:4001' });
+    }
+
+    proxy.web(req, res, { target: 'http://localhost:4002' });
 });
 
 server.on('upgrade', function (req, socket, head) {
@@ -41,17 +47,17 @@ server.on('upgrade', function (req, socket, head) {
 
             var roomID = route[2];
 
-            if( roomID === 'lobby' ) {
-                proxy.ws(req, socket, head, { target: 'http://localhost:3010', ws: true });
-            } else {
-                RoomModel.findOne({ _id : roomID, state : 'run' }).exec(function(err, room) {
-                    if( err ) {
-                        return console.log("mongo err", err);
-                    }
+            return RoomModel.findOne({ _id : roomID, state : 'run' }).exec(function(err, room) {
+                if( err ) {
+                    return console.log("mongo err", err);
+                }
 
-                    proxy.ws(req, socket, head, { target: 'http://localhost:' + room.port, ws: true });
-                });
-            }
+                if( !room ) {
+                    return proxy.ws(req, socket, head, { target: 'http://localhost:4100', ws: true });
+                }
+
+                return proxy.ws(req, socket, head, { target: 'http://localhost:' + room.port, ws: true });
+            });
         }
     }
 });

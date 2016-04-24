@@ -12,14 +12,15 @@ var express = require("express"),
     session      = require('express-session'),
     passport = require('passport'),
     mongoose = require('mongoose'),
-    configDB = require('./config/database.js'),
+    configDB = require('../config/database.js'),
     redis = require("redis"),
     async = require("async"),
-    passportConfig = require('./config/passport'),
+    passportConfig = require('../config/passport'),
     MongoStore = require('connect-mongo')(session);
 
 
-var port = parseInt(process.argv[2]);
+var _app = require("../" + process.argv[2]);
+var port = parseInt(process.argv[3]);
 
 if( isNaN(port) ) {
     throw "Process listen port error";
@@ -60,13 +61,12 @@ passportConfig(passport);
 app.use(passport.initialize());
 app.use(passport.session());
 
-var Server = require("./game/server.js");
-var roomServer = new Server(process.argv[3], app, redisClient);
+var server = http.createServer(app);
 
-roomServer.start(function(err){
-    if( err ) {
-        throw err;
-    }
-
-    app.listen(port);
+_app(app, redisClient, mongoose, server, passport, function() {
+    server.listen(port, "localhost", function() {
+        console.log(process.argv[2] + " listening on localhost:" + port);
+    });
 });
+
+

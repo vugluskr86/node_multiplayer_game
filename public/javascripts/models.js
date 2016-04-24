@@ -127,7 +127,7 @@
                 this.trigger('clear');
             }
 
-            this.socket = new ReconnectingWebSocket("ws://test10.tests.onalone.com//rooms/" + roomId);
+            this.socket = new ReconnectingWebSocket("ws://test10.tests.onalone.com/rooms/" + roomId);
             this.socket.onmessage = this._handleSocketMessage;
             this.socket.onclose = this._handleClose;
             this.socket.onerror = this._handleError;
@@ -208,14 +208,74 @@
     });
 
     var TopCollection = Backbone.Collection.extend({
-        url : API_PREFIX + "top",
+        url : API_PREFIX + "top"
     });
 
+
+
+    var ModelAccounting = Backbone.Model.extend({
+        initialize : function(options) {
+
+            _.bindAll(this, 'reject', 'close');
+
+            this.options = options;
+        },
+
+        reject : function() {
+            $.ajax({
+                url : this.url + "/" + this.get('_id') + '/reject',
+                dataType : 'json',
+                type : 'put',
+                success : function() {
+                    this.trigger('reject');
+                    this.set('state', 'reject');
+                }.bind(this)
+            });
+        },
+
+        close : function() {
+            $.ajax({
+                url : this.url + "/"  + this.get('_id') + '/close',
+                dataType : 'json',
+                type : 'put',
+                success : function() {
+                    this.trigger('close');
+                    this.set('state', 'close');
+                }.bind(this)
+            });
+        }
+    });
+
+
+    var PayoutModel = ModelAccounting.extend({
+        url : API_PREFIX + "payouts"
+    });
+
+    var InvoiceModel = ModelAccounting.extend({
+        url : API_PREFIX + "invoices"
+    });
+
+    var PayoutCollection = Backbone.Collection.extend({
+        url : API_PREFIX + "payouts",
+        model : PayoutModel
+    });
+
+    var InvoiceCollection = Backbone.Collection.extend({
+        url : API_PREFIX + "invoices",
+        model : InvoiceModel
+    });
+
+
     window.DataModule = {
-        RoomModel : RoomModel,
-        RoomsCollection : RoomsCollection,
-        UserModel : UserModel,
-        UsersCollection : UsersCollection,
-        TopCollection : TopCollection
+        RoomModel: RoomModel,
+        RoomsCollection: RoomsCollection,
+        UserModel: UserModel,
+        UsersCollection: UsersCollection,
+        TopCollection: TopCollection,
+        PayoutCollection: PayoutCollection,
+        InvoiceCollection: InvoiceCollection,
+        PayoutModel: PayoutModel,
+        InvoiceModel: InvoiceModel
     };
+
 })();

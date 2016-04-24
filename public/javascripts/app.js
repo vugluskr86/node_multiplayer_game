@@ -84,11 +84,19 @@
             }.bind(this));
 
 
-
+            this.views.adminView = new window.ViewsModule.AdminPage({
+                model : this.currentRoom,
+                valign : 'center',
+                align : 'center',
+                margin : 4,
+                width : 640,
+                height : 480
+            });
+/*
             this.views.adminRoom = new window.ViewsModule.AdminRoomView({
                 model : this.currentRoom
             });
-
+*/
             this.views.joinRoomView = new window.ViewsModule.RoomView({
                 model : this.currentRoom,
                 userModel : this.currentUser,
@@ -106,9 +114,9 @@
 
             this.$el.append(this.views.joinRoomView.$el);
             this.$el.append(this.views.leaveRoomView.$el);
-            this.$el.append(this.views.adminRoom.$el);
+            this.$el.append(this.views.adminView.$el);
 
-            this.views.adminRoom.$el.hide();
+            this.views.adminView.$el.hide();
 
             this.currentRoom.listenTo(this.currentRoom, 'change:players', function() {
                 var userid = this.currentUser.get('_id');
@@ -178,7 +186,7 @@
         },
 
         _handleClickShowAdmin: function() {
-            this.views.adminRoom.$el.show();
+            this.views.adminView.$el.show();
         }
     };
 

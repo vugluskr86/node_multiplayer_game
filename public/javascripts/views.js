@@ -1,6 +1,34 @@
 (function() {
 
 
+    var Table =  Backbone.View.extend({
+        attributes : {
+            "class" : "table"
+        },
+        elName : "table",
+
+        initialize: function(options) {
+            this.template = _.template( $('#template-table-view').html() );
+
+            this.options = {
+                head : [],
+                foot : []
+            };
+
+            _.extend(this.options, options);
+
+            this.render();
+        },
+
+        render: function() {
+            var data = _.clone(this.options);
+
+            this.$el.html(this.template(data));
+        }
+    });
+
+
+
     var WindowView = Backbone.View.extend({
         attributes : {
             "class" : "block-container"
@@ -422,6 +450,57 @@
 
             render: function() {
                 this.$el.html( this.template({ users : this.collection.toJSON() }) );
+            }
+        }),
+
+        AdminPage: WindowView.extend({
+
+            invoices : new Backbone.Collection(),
+            payouts : new Backbone.Collection(),
+            users : new Backbone.Collection(),
+
+            initialize: function(options) {
+                this.__proto__.constructor.__super__.initialize.apply(this, arguments);
+
+                _.bindAll(this, 'render');
+
+                this.template = _.template( $('#template-admin-page-view').html() );
+
+                if( options.invoices ) { this.invoices = options.invoices; }
+                if( options.payouts ) { this.payouts = options.payouts; }
+                if( options.users ) { this.users = options.users; }
+
+                this.invoicePage = new Table({
+                    head : ["Время", "Игрок", "Сумма", "Состояние", "Действия"],
+                    collection : this.invoices
+                });
+
+                this.payoutPage = new Table({
+                    head : ["Время", "Игрок", "Сумма", "Состояние", "Действия"],
+                    collection : this.payouts
+                });
+
+                this.usersPage = new Table({
+                    head : ["Имя", "Аватар", "Профиль", "Баланс", "Действия"],
+                    collection : this.users
+                });
+
+                this.invoices.listenTo(this.invoices, 'reset change', this.render);
+                this.payouts.listenTo(this.payouts, 'reset change', this.render);
+                this.users.listenTo(this.users, 'reset change', this.render);
+
+                this.render();
+            },
+
+            render: function() {
+
+                this.$el.html( this.template({}) );
+
+                this.$el.find('div#invoices div.container').append( this.invoicePage.$el );
+                this.$el.find('div#payouts div.container').append( this.payoutPage.$el );
+                this.$el.find('div#users div.container').append( this.usersPage.$el );
+
+                return this
             }
         })
     };

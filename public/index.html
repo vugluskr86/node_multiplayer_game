@@ -216,6 +216,62 @@
         <h4>Профиль</h4>
     </script>
 
+    <script type="text/template" id="template-admin-page-view">
+        <h4>Управление</h4>
+        <div>
+            <ul class="nav nav-tabs" role="tablist">
+                <li role="presentation" class="active"><a href="#invoices" aria-controls="home" role="tab" data-toggle="tab">Платежи</a></li>
+                <li role="presentation"><a href="#payouts" aria-controls="profile" role="tab" data-toggle="tab">Выводы</a></li>
+                <li role="presentation"><a href="#users" aria-controls="messages" role="tab" data-toggle="tab">Пользователи</a></li>
+                <li role="presentation"><a href="#settings" aria-controls="settings" role="tab" data-toggle="tab">Настройки</a></li>
+            </ul>
+            <div class="tab-content">
+                <div role="tabpanel" class="tab-pane active" id="invoices">
+                    <div class="container"></div>
+                </div>
+                <div role="tabpanel" class="tab-pane" id="payouts">
+                    <div class="container"></div>
+                </div>
+                <div role="tabpanel" class="tab-pane" id="users">
+                    <div class="container"></div>
+                </div>
+                <div role="tabpanel" class="tab-pane" id="settings">
+                    <div class="container"></div>
+                </div>
+            </div>
+        </div>
+    </script>
+
+    <script type="text/template" id="template-table-view">
+        <% if( typeof(head) !== "undefined" ) { %>
+        <thead>
+            <tr>
+                <% _.each(head, function(v) { %>
+                <th><%=v%></th>
+                <% }); %>
+            </tr>
+        </thead>
+        <% } %>
+        <% if( typeof(body) !== "undefined" ) { %>
+        <tbody>
+            <tr>
+                <% _.each(body, function(v) { %>
+                <td><%=v%></td>
+                <% }); %>
+            </tr>
+        </tbody>
+        <% } %>
+        <% if( typeof(foot) !== "undefined" ) { %>
+        <tfoot>
+            <tr>
+                <% _.each(foot, function(v) { %>
+                <th><%=v%></th>
+                <% }); %>
+            </tr>
+        </tfoot>
+        <% } %>
+    </script>
+
 
     <script type="application/javascript" src="/bower_components/jquery/dist/jquery.min.js"></script>
     <script type="application/javascript" src="/bower_components/underscore/underscore-min.js"></script>
