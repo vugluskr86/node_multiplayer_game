@@ -1,15 +1,17 @@
-(function() {
+(function (root, factory) {
+    'use strict';
 
-    window.requestAnimFrame = (function () {
-        return window.requestAnimationFrame ||
-            window.webkitRequestAnimationFrame ||
-            window.mozRequestAnimationFrame ||
-            window.oRequestAnimationFrame ||
-            window.msRequestAnimationFrame ||
-            function (/* function */ callback, /* DOMElement */ element) {
-                window.setTimeout(callback, 1000 / 60);
-            };
-    })();
+    module.exports = factory(
+        root,
+        exports,
+        require('underscore'),
+        require('jquery'),
+        require('backbone')
+    );
+
+}(this, function (root, Module, _, $, Backbone) {
+    'use strict';
+
 
 
     var GameFieldView = Backbone.View.extend({
@@ -51,21 +53,22 @@
 
             this.canvas = this.$el[0];
 
-
             this.context = this.canvas.getContext('2d');
 
             this.mouseCoord = { x : 0, y : 0 };
-
             this.mousePress =  { x : 0, y : 0 };
             this.mouseDown = false;
-
 
             this._initRender();
 
             $(window).on('resize', this._handleResizeCanvas);
             this._handleResizeCanvas();
 
-            this._loop();
+            createjs.Ticker.timingMode = createjs.Ticker.RAF_SYNCHED;
+            createjs.Ticker.setFPS(25);
+            createjs.Ticker.addEventListener("tick", this._loop);
+
+            //this._loop();
 
             this.listenTo(this.model, 'fillRoom', this._handleResetGameObjects);
             this.listenTo(this.model, 'updateMobsData', this._handleUpdateGameObject);
@@ -169,9 +172,13 @@
         },
 
 
-        _loop: function () {
+        _loop: function (event) {
+            this.model.mobs.forEach(function(object) {
+                object._calc(event.delta);
+                object._update();
+            }.bind(this));
+
             this.stage.update();
-            requestAnimFrame(this._loop);
         },
 
         _handleClickObject: function(e) {
@@ -180,11 +187,8 @@
 
 
         _constructSceneObject: function(object) {
-
             var container = new createjs.Container();
-
             var rect = new createjs.Shape();
-
             switch (object.prototype.view.type) {
                 case "box": {
                     rect.graphics
@@ -281,6 +285,9 @@
 
             container.cursor = "pointer";
 
+            // var objBount = container.getBounds();
+            // console.log(objBount)
+            // container.cache(-objBount.width * 2, -objBount.height * 2, objBount.width * 4, objBount.height * 4, 0.85);
             return container;
         },
 
@@ -341,10 +348,7 @@
         }
     });
 
-
-    // GameField
-    // Connect
-    window.GameModule = {
+    return {
         GameFieldView : GameFieldView
     };
-})();
+}));

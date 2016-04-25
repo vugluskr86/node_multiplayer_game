@@ -79,4 +79,4 @@ build/Release
 node_modules
 
 doc/TODO.txt
-/public/bower_components
+bower_components/

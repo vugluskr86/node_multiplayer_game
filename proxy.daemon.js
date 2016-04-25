@@ -19,6 +19,9 @@ var server = http.createServer(function(req, res) {
     if( req.url.indexOf('/api/v1/users') === 0 ) {
         return proxy.web(req, res, { target: 'http://localhost:4005' });
     }
+    if( req.url.indexOf('/api/v1/bootstrap') === 0 ) {
+        return proxy.web(req, res, { target: 'http://localhost:4005' });
+    }
 
     if( req.url.indexOf('/api/v1/top') === 0 ) {
         return proxy.web(req, res, { target: 'http://localhost:4005' });
@@ -32,6 +35,9 @@ var server = http.createServer(function(req, res) {
         return proxy.web(req, res, { target: 'http://localhost:4001' });
     }
     if( req.url.indexOf('/api/v1/payouts') === 0 ) {
+        return proxy.web(req, res, { target: 'http://localhost:4001' });
+    }
+    if( req.url.indexOf('/api/v1/history') === 0 ) {
         return proxy.web(req, res, { target: 'http://localhost:4001' });
     }
 

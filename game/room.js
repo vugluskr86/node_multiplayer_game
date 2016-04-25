@@ -236,17 +236,18 @@ Room.prototype.updateInfo = function(room) {
 };
 
 Room.prototype.update = function(dt) {
-
     for(var mIndex = 0; mIndex < this.mobs.mobs.length; mIndex++) {
         var mob = this.mobs.mobs[mIndex];
         mob.update(dt);
     }
+    /*
     for(var cIndex = 0; cIndex < this.clients.length; cIndex++) {
         var client = this.clients[cIndex];
         if( client.ws.readyState == 1) {
             client.updateMobsData();
         }
     }
+    */
 };
 
 Room.prototype.broadcast = function(message) {

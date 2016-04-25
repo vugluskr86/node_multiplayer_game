@@ -1,28 +1,41 @@
 module.exports = function (app, redisClient, mongoose, server, passport, callback) {
     const API_PREFIX = "/api/v1/";
 
+    var _ = require("underscore");
+
     var UserModel = require('./models/user');
     var provideHttp = require('./mw/provideHttp');
     var isAuthenticated = require('./mw/isAuthenticated');
+    var isAuthenticatedAdmin = require('./mw/isAuthenticatedAdmin');
 
-    app.get([ API_PREFIX + "users" ], function(req, res) {
+    // Endpoint : bootstrap
+    app.get([ API_PREFIX + "bootstrap" ], function(req, res) {
         if( req.isAuthenticated() ) {
-            var user = {
-                auth : true,
-                balance : req.user.balance,
-                photo : req.user.photo,
-                displayName : req.user.displayName,
-                role : req.user.role,
-                currentRoom : req.user.currentRoom,
-                _id : req.user._id
-            };
-            return res.json(user);
+            var auth = { auth : true},
+                user = req.user.toObject();
+            _.extend(auth, user);
+
+            console.log(auth)
+
+            return res.json(auth);
         } else {
             return res.json({ auth : false });
         }
     });
 
-    app.get([ API_PREFIX + "users/:id" ], function(req, res) {
+    // Endpoint : users
+
+    app.get([ API_PREFIX + "users" ], isAuthenticatedAdmin, function(req, res) {
+        var pages = {
+            page : parseInt(req.query.page),
+            limit : parseInt(req.query.limit),
+            select : 'id displayName photo balance currentRoom role ban'
+        }, query = {};
+
+        return UserModel.getPage(query, pages, provideHttp.bind(null, res));
+    });
+
+    app.get([ API_PREFIX + "users/:id" ], isAuthenticated, function(req, res) {
         if( !req.params.id ) {
             return res.status("403").json({ message : "InvalidId" });
         }
@@ -31,6 +44,19 @@ module.exports = function (app, redisClient, mongoose, server, passport, callbac
             .findOne({ _id : req.params.id })
             .select('id displayName photo balance currentRoom role')
             .exec(provideHttp.bind(null, res));
+    });
+
+
+    app.put([ API_PREFIX + "users/:id/ban" ], isAuthenticatedAdmin, function(req, res) {
+        return UserModel.ban({
+            _id : req.params.id
+        }, provideHttp.bind(null, res));
+    });
+
+    app.put([ API_PREFIX + "users/:id/unban" ], isAuthenticatedAdmin, function(req, res) {
+        return UserModel.unban({
+            _id : req.params.id
+        }, provideHttp.bind(null, res));
     });
 
     app.post([ API_PREFIX + "users" ], isAuthenticated, function(req, res) {

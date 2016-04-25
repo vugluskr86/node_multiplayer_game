@@ -34,8 +34,9 @@ Server.prototype.start = function(callback) {
             var client = this.room.addClient(clientWs, req.user);
 
             client.fillRoom();
+            client.updateMobsData();
 
-            clientWs.on('message', client.message);
+            clientWs.on('message', client.message.bind(client));
             clientWs.on('close', this.room.removeClient.bind(this.room, client));
 
         }.bind(this));

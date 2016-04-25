@@ -1,5 +1,8 @@
 var mongoose = require('mongoose');
 var bcrypt   = require('bcrypt-nodejs');
+var mongoosePaginate = require('mongoose-paginate');
+
+var _ = require("underscore");
 
 var userSchema = mongoose.Schema({
     displayName: {type: String},
@@ -7,6 +10,8 @@ var userSchema = mongoose.Schema({
     balance: {type: Number, default: 10000},
     currentRoom: {type: mongoose.Schema.Types.ObjectId, ref: 'Room'},
     role: { type: String },
+
+    ban: { type:Boolean , default: false},
 
     local            : {
         email        : String,
@@ -37,18 +42,35 @@ var userSchema = mongoose.Schema({
     vk         : {
         id           : String,
         displayName  : String
-    }
+    },
+
+    created:    { type: Date, default : Date.now }
 });
 
-// generating a hash
 userSchema.methods.generateHash = function(password) {
     return bcrypt.hashSync(password, bcrypt.genSaltSync(8), null);
 };
 
-// checking if password is valid
 userSchema.methods.validPassword = function(password) {
     return bcrypt.compareSync(password, this.local.password);
 };
 
-// create the model for users and expose it to our app
+userSchema.plugin(mongoosePaginate);
+
+userSchema.statics.getPage = function(query, options, callback) {
+    return mongoose.model('User').paginate(query, options, callback);
+};
+
+userSchema.statics.ban = function(options, callback) {
+    var q = _.clone(options);
+    _.extend(q, { ban : false });
+    return mongoose.model('User').update(q, { ban : true }).exec(callback);
+};
+
+userSchema.statics.unban = function(options, callback) {
+    var q = _.clone(options);
+    _.extend(q, { ban : true });
+    return mongoose.model('User').update(q, { ban : false }).exec(callback);
+};
+
 module.exports = mongoose.model('User', userSchema);

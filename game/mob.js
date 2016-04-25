@@ -9,8 +9,8 @@ function Mob(id, options, optionId) {
     this.options = options;
 
     this.center = {
-        x : _.random(-1000, 1000),
-        y : _.random(-1000, 1000)
+        x : _.random(-3000, 3000),
+        y : _.random(-3000, 3000)
     };
 
     this.life = _.random(0, 2 * Math.PI);
@@ -32,7 +32,12 @@ Mob.prototype.toJSON = function() {
         x : this.x,
         y : this.y,
         angle : this.angle,
-        id : this.id
+        id : this.id,
+        center : this.center,
+        life : this.life,
+        speed : this.speed,
+        r_x : this.r_x,
+        r_y: this.r_y
     };
 };
 

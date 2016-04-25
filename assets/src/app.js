@@ -1,28 +1,45 @@
-(function() {
+(function (root, factory) {
+    'use strict';
+
+    module.exports = factory(
+        root,
+        exports,
+        require('underscore'),
+        require('jquery'),
+        require('backbone'),
+        require('./models'),
+        require('./views'),
+        require('./game')
+    );
+
+}(this, function (root, Module, _, $, Backbone, DataModule, ViewsModule, GameModule) {
+    'use strict';
 
     var App = {
 
-        views : {
-
-        },
-
-        _viewsCache : [],
+        views : {},
 
         initialize : function() {
             _.bindAll(this,
                 '_handleUserLogOut', '_handleUserLogin', '_handleClickShowAdmin',
-                '_addView');
+                '_handleClickPayout', '_handleClickInvoice', '_handleClickDonate');
+
+            console.log("initialize")
 
             this.$el = $('div.info-block-container');
 
+            var CurrentUserModel = DataModule.UserModel.extend({
+                url : "/api/v1/bootstrap"
+            });
+
             // Models
-            this.currentUser = new window.DataModule.UserModel();
-            this.currentRoom = new window.DataModule.RoomModel({
+            this.currentUser = new CurrentUserModel();
+            this.currentRoom = new DataModule.RoomModel({
                 id : "571526540e1ea4be02c7683e"
             });
             this.notifyCollection = new Backbone.Collection();
 
-            this.topCollection = new window.DataModule.TopCollection();
+            this.topCollection = new DataModule.TopCollection();
 
             this.topCollection.fetch({ reset : true });
 
@@ -33,16 +50,23 @@
                 this.topCollection.fetch({ reset : true });
             }.bind(this));
 
+            // filtered
+            this.payouts = new DataModule.PayoutCollection();
+            this.invoices = new DataModule.InvoiceCollection();
+            this.history = new DataModule.UserHistoryCollection();
+
+            this.adminPayouts = new DataModule.PayoutCollection();
+            this.adminInvoices = new DataModule.InvoiceCollection();
+            this.adminUsers = new DataModule.UsersCollection();
 
             // Game Field
-            this.views.gameFieldView = new window.GameModule.GameFieldView({
+            this.views.gameFieldView = new GameModule.GameFieldView({
                 model : this.currentRoom
             });
             $('.game-field-container').append(this.views.gameFieldView.$el);
 
-
             // User Panel
-            this.views.userCardView = new window.ViewsModule.UserCardView({
+            this.views.userCardView = new ViewsModule.UserCardView({
                 model :  this.currentUser,
                 valign : 'top',
                 align : 'left',
@@ -50,13 +74,16 @@
                 width : 160,
                 height : 240
             });
+
             this.views.userCardView.$el.hide();
+
             this.$el.append(this.views.userCardView.$el);
+
             this.views.userCardView.listenTo(this.views.userCardView, 'click-admin-settings', this._handleClickShowAdmin);
-            this.views.userCardView.listenTo(this.views.userCardView, 'click-room-list', this._handleClickRoomList);
+            this.views.userCardView.listenTo(this.views.userCardView, 'click-invoice', this._handleClickInvoice);
+            this.views.userCardView.listenTo(this.views.userCardView, 'click-payout', this._handleClickPayout);
 
-
-            this.views.topView = new window.ViewsModule.TopView({
+            this.views.topView = new ViewsModule.TopView({
                 collection : this.topCollection,
                 valign : 'top',
                 align : 'right',
@@ -65,14 +92,12 @@
                 height : 240
             });
 
-
-            this.views.signInView = new window.ViewsModule.LoginBlockView({});
-            this.views.signUpView = new window.ViewsModule.SignBlockView({});
+            this.views.signInView = new ViewsModule.LoginBlockView({});
+            this.views.signUpView = new ViewsModule.SignBlockView({});
 
             this.views.signInView.$el.hide();
             this.views.signUpView.$el.hide();
             this.views.topView.$el.hide();
-
 
             this.$el.append(this.views.signInView.$el);
             this.$el.append(this.views.signUpView.$el);
@@ -83,38 +108,62 @@
                 this.views.signUpView.$el.show();
             }.bind(this));
 
-
-            this.views.adminView = new window.ViewsModule.AdminPage({
+            this.views.adminView = new ViewsModule.AdminPage({
                 model : this.currentRoom,
                 valign : 'center',
                 align : 'center',
                 margin : 4,
                 width : 640,
-                height : 480
-            });
-/*
-            this.views.adminRoom = new window.ViewsModule.AdminRoomView({
-                model : this.currentRoom
-            });
-*/
-            this.views.joinRoomView = new window.ViewsModule.RoomView({
-                model : this.currentRoom,
-                userModel : this.currentUser,
-                valign : 'center'
+                height : 480,
+                payouts : this.adminPayouts,
+                invoices : this.adminInvoices,
+                users : this.adminUsers
             });
 
-            this.views.leaveRoomView = new window.ViewsModule.RoomView({
+            this.views.profileView = new ViewsModule.ProfilePage({
+                model : this.currentUser,
+                valign : 'center',
+                align : 'center',
+                margin : 4,
+                width : 640,
+                height : 480,
+                payouts : this.payouts,
+                invoices : this.invoices,
+                history : this.history
+            });
+
+            this.views.joinRoomView = new ViewsModule.RoomView({
                 model : this.currentRoom,
                 userModel : this.currentUser,
-                valign : 'top'
+                valign : 'center',
+                align : 'center',
+                margin : 4,
+                width : 242,
+                height : 100
             });
+
+            this.views.leaveRoomView = new ViewsModule.RoomView({
+                model : this.currentRoom,
+                userModel : this.currentUser,
+                valign : 'top',
+                align : 'center',
+                margin : 4,
+                width : 242,
+                height : 100
+            });
+
+            this.views.joinRoomView.listenTo(this.views.joinRoomView, 'click-donate', this._handleClickDonate);
+            this.views.leaveRoomView.listenTo(this.views.leaveRoomView, 'click-donate', this._handleClickDonate);
 
             this.views.joinRoomView.$el.hide();
             this.views.leaveRoomView.$el.hide();
+            this.views.profileView.$el.hide();
 
             this.$el.append(this.views.joinRoomView.$el);
             this.$el.append(this.views.leaveRoomView.$el);
             this.$el.append(this.views.adminView.$el);
+            this.$el.append(this.views.profileView.$el);
+
 
             this.views.adminView.$el.hide();
 
@@ -132,7 +181,7 @@
                 }
             }.bind(this));
 
-            this.views.notifyView = new window.ViewsModule.NotifyView({
+            this.views.notifyView = new ViewsModule.NotifyView({
                 collection : this.notifyCollection
             });
 
@@ -154,25 +203,20 @@
                 var _errDictionary = {
                     "NotMoney" : "Не хватает денег, пополните ваш баланс!"
                 };
-
                 var _msg = _errDictionary[message];
-
                 this.notifyCollection.add({ message: { text: _msg === undefined ? message : _msg }, type : 'danger' });
             }.bind(this));
 
-
             this.currentUser.fetch({
                 success : function() {
+
+                    this.payouts.setFilter({data : { filter_userid : this.currentUser.get("_id") }});
+                    this.invoices.setFilter({data : { filter_userid : this.currentUser.get("_id") }});
+                    this.history.setFilter({data : { filter_userid : this.currentUser.get("_id") }});
+
                     this.currentRoom.fetch();
                 }.bind(this)
             });
-        },
-
-
-        _addView: function(_constructor, options) {
-            var _view = new _constructor(options);
-
-            this._viewsCache.push( _view );
         },
 
         _handleUserLogOut: function() {
@@ -182,19 +226,40 @@
         _handleUserLogin: function() {
             this.views.topView.$el.show();
             this.views.userCardView.$el.show();
-          //  this.views.roomListView.$el.show();
         },
 
         _handleClickShowAdmin: function() {
             this.views.adminView.$el.show();
+
+            this.adminPayouts.fetch({ reset : true });
+            this.adminInvoices.fetch({ reset : true });
+            this.adminUsers.fetch({ reset : true });
+        },
+
+        _handleClickInvoice: function() {
+            this.views.profileView.$el.show();
+
+            this.payouts.fetch({ reset : true });
+            this.invoices.fetch({ reset : true });
+            this.history.fetch({ reset : true });
+        },
+
+        _handleClickPayout:function() {
+            this.views.profileView.$el.show();
+
+            this.payouts.fetch({ data : { filter_userid : this.currentUser.get("_id") }, reset : true });
+            this.invoices.fetch({ data : { filter_userid : this.currentUser.get("_id") }, reset : true });
+            this.history.fetch({ data : { filter_userid : this.currentUser.get("_id") }, reset : true });
+        },
+
+        _handleClickDonate: function() {
+            this.views.profileView.$el.show();
+
+            this.payouts.fetch({ data : { filter_userid : this.currentUser.get("_id") }, reset : true });
+            this.invoices.fetch({ data : { filter_userid : this.currentUser.get("_id") }, reset : true });
+            this.history.fetch({ data : { filter_userid : this.currentUser.get("_id") }, reset : true });
         }
     };
 
-    window.App = App;
-})();
-
-$(document).ready(function () {
-    console.log("ready!");
-
-    window.App.initialize();
-});
+    return App;
+}));

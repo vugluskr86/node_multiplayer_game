@@ -1,5 +1,6 @@
 var _ = require('underscore');
 var RoomModel = require('../models/room');
+var UserHistoryModel = require('../models/userHistory');
 var async = require('async');
 
 function Client(id, ws, user, room) {
@@ -7,7 +8,7 @@ function Client(id, ws, user, room) {
     this.ws = ws;
     this.room = room;
     this.user = user;
-    console.log("Client connected", id);
+   // console.log("Client connected", id, user);
 }
 
 Client.prototype.disconnect = function() {
@@ -15,7 +16,7 @@ Client.prototype.disconnect = function() {
 };
 
 Client.prototype.message = function(message) {
-    if( this.user.currentRoom && this.user.currentRoom.toString() === this.room.id.toString() ) {
+    if( this.user && this.user.currentRoom && this.user.currentRoom.toString() === this.room.id.toString() ) {
         var packet = JSON.parse(message);
         if( packet && packet.action ) {
             switch (packet.action) {
@@ -55,6 +56,11 @@ Client.prototype.message = function(message) {
                     var moneyProfit = parseInt(mob.prototype.cost / 100 * mob.prototype.profit);
                     this.user.balance += moneyProfit;
 
+                    var history = new UserHistoryModel();
+                    history.user = this.user._id;
+                    history.room = this.user.currentRoom;
+                    history.mob = mob;
+
                     // изменяем кол-во мобов на сервере
 
                     async.parallel([
@@ -63,6 +69,9 @@ Client.prototype.message = function(message) {
                         }.bind(this),
                         function(next) {
                             this.user.save(next)
+                        }.bind(this),
+                        function(next) {
+                            history.save(next)
                         }.bind(this)
                     ], function(err, result) {
                         if( err ) {

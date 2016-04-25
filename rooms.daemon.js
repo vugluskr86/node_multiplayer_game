@@ -1,3 +1,4 @@
+var async = require("async");
 module.exports = function (app, redisClient, mongoose, server, passport, callback) {
     const API_PREFIX = "/api/v1/";
 
@@ -6,6 +7,8 @@ module.exports = function (app, redisClient, mongoose, server, passport, callbac
     var provideHttp = require('./mw/provideHttp');
     var isAuthenticated = require('./mw/isAuthenticated');
     var isAuthenticatedAdmin = require('./mw/isAuthenticatedAdmin');
+
+    var _ = require("underscore");
 
     /*
     var startPort = 3010;

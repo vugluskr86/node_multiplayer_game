@@ -1,8 +1,121 @@
-(function() {
+(function (root, factory) {
+    'use strict';
+
+    module.exports = factory(
+        root,
+        exports,
+        require('underscore'),
+        require('jquery'),
+        require('backbone'),
+        require('reconnectingWebsocket')
+    );
+
+}(this, function (root, Module, _, $, Backbone, ReconnectingWebSocket) {
+    'use strict';
 
     const API_PREFIX = "/api/v1/";
 
+    var PaginatedCollection = Backbone.Collection.extend({
+        _filter : {
+            data : {}
+        },
+        initialize: function(options) {
+            _.bindAll(this, 'parse', 'url', 'pageInfo', 'nextPage', 'previousPage', 'setFilter');
+            typeof(options) != 'undefined' || (options = {});
+            this.page = 1;
+            typeof(this.limit) != 'undefined' || (this.limit = 5);
+        },
+        fetch: function(options) {
+            typeof(options) != 'undefined' || (options = {});
+            this.trigger("fetching");
+            var self = this;
+            var success = options.success;
+            options.success = function(resp) {
+                self.trigger("fetched");
+                if(success) { success(self, resp); }
+            };
+            return Backbone.Collection.prototype.fetch.call(this, options);
+        },
+        parse: function(resp) {
+            this.page = resp.page;
+            this.limit = resp.limit;
+            this.total = resp.total;
+            return resp.docs;
+        },
+        url: function() {
+            return this.baseUrl + '?' + $.param({page: this.page, limit: this.limit});
+        },
+        pageInfo: function() {
+            var info = {
+                total: this.total,
+                page: this.page,
+                limit: this.limit,
+                pages: Math.ceil(this.total / this.limit),
+                prev: false,
+                next: false
+            };
+
+            var max = Math.min(this.total, this.page * this.limit);
+
+            if (this.total == this.pages * this.limit) {
+                max = this.total;
+            }
+
+            info.range = [(this.page - 1) * this.limit + 1, max];
+
+            if (this.page > 1) {
+                info.prev = this.page - 1;
+            }
+
+            if (this.page < info.pages) {
+                info.next = this.page + 1;
+            }
+
+            return info;
+        },
+        nextPage: function(options) {
+            var _opt = { reset : true };
+            _.extend(_opt, this._filter);
+            _.extend(_opt, options || {});
+            if (!this.pageInfo().next) {
+                return false;
+            }
+            this.page = this.page + 1;
+            return this.fetch(_opt);
+        },
+        previousPage: function(options) {
+            var _opt = { reset : true };
+            _.extend(_opt, this._filter);
+            _.extend(_opt, options || {});
+
+            if (!this.pageInfo().prev) {
+                return false;
+            }
+            this.page = this.page - 1;
+            return this.fetch(_opt);
+        },
+        setFilter:function (options) {
+            this._filter = options;
+        }
+    });
+
     var MobModel = Backbone.Model.extend({
+
+        initialize: function() {
+            _.bindAll(this, '_calc', '_update');
+        },
+
+        _calc : function(dt) {
+            var physic = this.toJSON();
+
+         //   console.log(dt)
+
+            this.set('x', physic.center.x + Math.sin(physic.life) * physic.r_x * Math.sin(physic.life), {silent: true});
+            this.set('y', physic.center.y + Math.cos(physic.life) * physic.r_y * Math.sin(physic.life), {silent: true});
+
+            this.set('life', this.get('life') + (dt / 1000 * physic.speed));
+        },
+
         _update : function() {
             var shape = this.get('shape');
 
@@ -127,6 +240,8 @@
                 this.trigger('clear');
             }
 
+            console.log("_connect", roomId);
+
             this.socket = new ReconnectingWebSocket("ws://test10.tests.onalone.com/rooms/" + roomId);
             this.socket.onmessage = this._handleSocketMessage;
             this.socket.onclose = this._handleClose;
@@ -177,7 +292,7 @@
         _auth : null,
 
         initialize : function() {
-            _.bindAll(this, 'isAuthenticated', 'isAuthenticatedAdmin', '_handleAuthStateChanged');
+            _.bindAll(this, 'isAuthenticated', 'isAuthenticatedAdmin', '_handleAuthStateChanged', 'ban', 'unban');
             this.listenTo(this, 'change', this._handleAuthStateChanged);
         },
 
@@ -198,14 +313,33 @@
                 }
                 this._auth = this.get("auth");
             }
+        },
+
+        ban : function() {
+            $.ajax({
+                url : this.url + "/" + this.get('_id') + '/ban',
+                dataType : 'json',
+                type : 'put',
+                success : function() {
+                    this.trigger('ban');
+                    this.set('ban', true);
+                }.bind(this)
+            });
+        },
+
+        unban : function() {
+            $.ajax({
+                url : this.url + "/"  + this.get('_id') + '/unban',
+                dataType : 'json',
+                type : 'put',
+                success : function() {
+                    this.trigger('unban');
+                    this.set('ban', false);
+                }.bind(this)
+            });
         }
     });
 
-    var UsersCollection = Backbone.Collection.extend({
-        initialize : function() {
-
-        }
-    });
 
     var TopCollection = Backbone.Collection.extend({
         url : API_PREFIX + "top"
@@ -246,27 +380,40 @@
         }
     });
 
-
     var PayoutModel = ModelAccounting.extend({
         url : API_PREFIX + "payouts"
     });
 
-    var InvoiceModel = ModelAccounting.extend({
+    var InvoiceModel = Backbone.Model.extend({
         url : API_PREFIX + "invoices"
     });
 
-    var PayoutCollection = Backbone.Collection.extend({
-        url : API_PREFIX + "payouts",
+    var UserHistoryModel = Backbone.Model.extend({
+        url : API_PREFIX + "history"
+    });
+
+    var PayoutCollection = PaginatedCollection.extend({
+        baseUrl : API_PREFIX + "payouts",
         model : PayoutModel
     });
 
-    var InvoiceCollection = Backbone.Collection.extend({
-        url : API_PREFIX + "invoices",
+    var InvoiceCollection = PaginatedCollection.extend({
+        baseUrl : API_PREFIX + "invoices",
         model : InvoiceModel
     });
 
+    var UserHistoryCollection = PaginatedCollection.extend({
+        baseUrl : API_PREFIX + "history",
+        model : UserHistoryModel
+    });
 
-    window.DataModule = {
+    var UsersCollection = PaginatedCollection.extend({
+        baseUrl : API_PREFIX + "users",
+        model : UserModel
+    });
+
+
+    return {
         RoomModel: RoomModel,
         RoomsCollection: RoomsCollection,
         UserModel: UserModel,
@@ -275,7 +422,9 @@
         PayoutCollection: PayoutCollection,
         InvoiceCollection: InvoiceCollection,
         PayoutModel: PayoutModel,
-        InvoiceModel: InvoiceModel
+        InvoiceModel: InvoiceModel,
+        UserHistoryModel: UserHistoryModel,
+        UserHistoryCollection: UserHistoryCollection
     };
 
-})();
+}));

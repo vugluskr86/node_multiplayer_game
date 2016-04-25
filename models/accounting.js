@@ -1,6 +1,7 @@
 var mongoose = require('mongoose');
 var bcrypt   = require('bcrypt-nodejs');
 var _ = require('underscore');
+var mongoosePaginate = require('mongoose-paginate');
 
 var operations = 'payout mobTake invoice'.split(' ');
 var states     = 'request close reject'.split(' ');
@@ -15,85 +16,107 @@ var AccountSchema = new  mongoose.Schema({
     created:    { type: Date, default : Date.now }
 });
 
-AccountSchema.methods.createPayout = function(options, callback) {
-     var _m = new this.model('Account');
+AccountSchema.statics.createPayout = function(options, callback) {
+    var _m = new this;
 
-    _m.userid = options.user._id;
-    _m.valueAbs = options.user.balance;
-    _m.valueDelta = options.value;
+    _m.userid = options.userid;
+    _m.valueAbs = options.valueAbs;
+    _m.valueDelta = options.valueDelta;
     _m.operation = 'payout';
     _m.state = 'request';
 
     return _m.save(callback);
 };
 
-AccountSchema.methods.closePayout = function(options, callback) {
-    var q = _.clone(options);
-    _.extend(q, { operation : 'payout', state : 'request' });
-    return this.model('Account').update(q, { state : 'close' }).exec(callback);
-};
+AccountSchema.statics.createMobTake = function(options, callback) {
+    var _m = new this;
 
-AccountSchema.methods.rejectPayout = function(options, callback) {
-    var q = _.clone(options);
-    _.extend(q, { operation : 'payout', state : 'request' });
-    return this.model('Account').update(q, { state : 'reject' }).exec(callback);
-};
-
-AccountSchema.methods.createMobTake = function(options, callback) {
-    var _m = this.model('Account');
-
-    _m.userid = options.user._id;
-    _m.valueAbs = options.user.balance;
-    _m.valueDelta = options.value;
-    _m.base = options.mob;
+    _m.userid = options.userid;
+    _m.valueAbs = options.valueAbs;
+    _m.valueDelta = options.valueDelta;
+    _m.base = options.base;
     _m.operation = 'mobTake';
     _m.state = 'complete';
 
     return _m.save(callback);
 };
 
-AccountSchema.methods.createInvoice = function(options, callback) {
-    var _m = this.model('Account');
+AccountSchema.statics.createInvoice = function(options, callback) {
+    var _m = new this;
 
-    _m.userid = options.user._id;
-    _m.valueAbs = options.user.balance;
-    _m.valueDelta = options.value;
-    _m.base = options.mob;
+    _m.userid = options.userid;
+    _m.valueAbs = options.valueAbs;
+    _m.valueDelta = options.valueDelta;
+    _m.base = options.base;
     _m.operation = 'invoice';
     _m.state = 'request';
 
     return _m.save(callback);
 };
 
-AccountSchema.methods.closeInvoice = function(options, callback) {
+AccountSchema.statics.closePayout = function(options, callback) {
     var q = _.clone(options);
-    _.extend(q, { operation : 'invoice', state : 'request' });
-    return this.model('Account').update(q, { state : 'close' }).exec(callback);
+    _.extend(q, { operation : 'payout', state : 'request' });
+    return mongoose.model('Account').update(q, { state : 'close' }).exec(callback);
 };
 
-AccountSchema.methods.rejectInvoice = function(options, callback) {
+AccountSchema.statics.rejectPayout = function(options, callback) {
     var q = _.clone(options);
-    _.extend(q, { operation : 'invoice', state : 'request' });
-    return this.model('Account').update(q, { state : 'reject' }).exec(callback);
+    _.extend(q, { operation : 'payout', state : 'request' });
+    return mongoose.model('Account').update(q, { state : 'reject' }).exec(callback);
 };
 
-AccountSchema.methods.getInvoices = function(options, callback) {
+
+AccountSchema.statics.closeInvoice = function(options, callback) {
+    var q = _.clone(options);
+    _.extend(q, { operation : 'invoice', state : 'request' });
+    return mongoose.model('Account').update(q, { state : 'close' }).exec(callback);
+};
+
+AccountSchema.statics.rejectInvoice = function(options, callback) {
+    var q = _.clone(options);
+    _.extend(q, { operation : 'invoice', state : 'request' });
+    return mongoose.model('Account').update(q, { state : 'reject' }).exec(callback);
+};
+
+AccountSchema.statics.getInvoices = function(options, callback) {
     var q = _.clone(options);
     _.extend(q, { operation : 'invoice' });
-    return this.model('Account').find(q).exec(callback);
+    return mongoose.model('Account').find(q).exec(callback);
 };
 
-AccountSchema.methods.getPayouts = function(options, callback) {
+AccountSchema.statics.getPayouts = function(options, callback) {
     var q = _.clone(options);
     _.extend(q, { operation : 'payout' });
-    return this.model('Account').find(q).exec(callback);
+    return mongoose.model('Account').find(q).exec(callback);
 };
 
-AccountSchema.methods.getMobTakes = function(options, callback) {
+AccountSchema.statics.getMobTakes = function(options, callback) {
     var q = _.clone(options);
     _.extend(q, { operation : 'mobTake' });
-    return this.model('Account').find(q).exec(callback);
+    return mongoose.model('Account').find(q).exec(callback);
 };
 
+
+AccountSchema.statics.getInvoicesPage = function(query, options, callback) {
+    var q = _.clone(query);
+    _.extend(q, { operation : 'invoice' });
+    return mongoose.model('Account').paginate(q, options, callback);
+};
+
+AccountSchema.statics.getPayoutsPage = function(query, options, callback) {
+    var q = _.clone(query);
+    _.extend(q, { operation : 'payout' });
+    return mongoose.model('Account').paginate(q, options, callback);
+};
+
+AccountSchema.statics.getMobTakesPage = function(query, options, callback) {
+    var q = _.clone(query);
+    _.extend(q, { operation : 'mobTake' });
+    return mongoose.model('Account').paginate(q, options, callback);
+};
+
+
+AccountSchema.plugin(mongoosePaginate);
 
 module.exports = mongoose.model('Account', AccountSchema);

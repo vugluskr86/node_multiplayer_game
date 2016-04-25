@@ -1,9 +1,10 @@
 module.exports = function(app, redisClient, mongoose, server, passport, callback) {
 
-
     var express = require('express');
     var path = require('path');
+    var flash = require('connect-flash');
     app.use(express.static(path.join(__dirname, 'public')));
+    app.use(flash());
 
     app.post('/signup', passport.authenticate('local-signup', {
         successRedirect : '/',
