@@ -26,6 +26,8 @@ Server.prototype.start = function(callback) {
         }.bind(this));
 
         this.app.ws('/rooms/' + this.room.id, function(clientWs, req) {
+            console.log("connect", this.room.id, req.isAuthenticated())
+
             if( !req.isAuthenticated() ) {
                 clientWs.close();
                 return;

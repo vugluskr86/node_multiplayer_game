@@ -7,7 +7,7 @@
         require('underscore'),
         require('jquery'),
         require('backbone'),
-        require('reconnectingWebsocket')
+        require('ReconnectingWebSocket')
     );
 
 }(this, function (root, Module, _, $, Backbone, ReconnectingWebSocket) {
@@ -239,8 +239,6 @@
                 this.mobs.reset([]);
                 this.trigger('clear');
             }
-
-            console.log("_connect", roomId);
 
             this.socket = new ReconnectingWebSocket("ws://test10.tests.onalone.com/rooms/" + roomId);
             this.socket.onmessage = this._handleSocketMessage;

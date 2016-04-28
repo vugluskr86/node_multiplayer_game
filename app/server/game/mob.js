@@ -9,8 +9,8 @@ function Mob(id, options, optionId) {
     this.options = options;
 
     this.center = {
-        x : _.random(-3000, 3000),
-        y : _.random(-3000, 3000)
+        x : _.random(-1500, 1500),
+        y : _.random(-1500, 1500)
     };
 
     this.life = _.random(0, 2 * Math.PI);

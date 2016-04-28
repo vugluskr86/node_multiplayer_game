@@ -1,0 +1,35 @@
+<h4>Список комнат</h4>
+<table class="table list">
+    <thead>
+    <tr>
+        <th>#</th>
+        <th>Игроки</th>
+        <th>Фигруы</th>
+        <th>Войти</th>
+    </tr>
+    </thead>
+    <tbody>
+    <% rooms.forEach(function(room){ %>
+    <tr>
+        <td><%=room.name%></td>
+        <td><%=room.players.length%> из <%=room.maxUsers%></td>
+        <td><%=room.mobs%> из <%=room.maxMobs%></td>
+        <td>
+            <div class="btn-group btn-group-xs">
+                <% if( room._current ) { %>
+                <button data-room-id="<%=room._id%>" title="Продолжить" class="btn btn-success btn-room-continue"><i class="fa fa-play"></i></button>
+                <button data-room-id="<%=room._id%>" title="Выйти из игры" class="btn btn-danger btn-room-leave"><i class="fa fa-sign-out"></i></button>
+                <% } else { %>
+                <button data-room-id="<%=room._id%>" title="Подключится к игре" class="btn btn-primary btn-room-join"><i class="fa fa-play-circle-o"></i></button>
+                <% } %>
+            </div>
+        </td>
+    </tr>
+    <% }); %>
+    </tbody>
+</table>
+<div class="btn-group btn-group-sm">
+    <a title="Топ игроков" href="#" class="btn btn-primary btn-players-top">Игроки</a>
+    <a title="Пополнить счет" href="#" class="btn btn-warning btn-donate">Купить $</a>
+    <a title="Выйти из приложения" href="/logout" class="btn btn-danger btn-exit">Выход</a>
+</div>

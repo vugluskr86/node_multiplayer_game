@@ -1,0 +1,12 @@
+<h4>Управление комнатой:<span><%=room.name%></span></h4>
+<form class="form-inline form-room-settings">
+    <div><span>Название&nbsp;</span><input class="form-control input-sm" type="text" name="name" value="<%=room.name%>"/></div>
+    <div><span>Сложность&nbsp;</span><input class="form-control input-sm" type="text" name="complexity" value="<%=room.complexity%>"/></div>
+    <div><span>Макс.игроков&nbsp;</span><input class="form-control input-sm" type="text" name="maxUsers" value="<%=room.maxUsers%>"/></div>
+    <div><span>Макс.фигур&nbsp;</span><input class="form-control input-sm" type="text" name="maxMobs" value="<%=room.maxMobs%>"/></div>
+    <div><span>Скорость спавна&nbsp;</span><input class="form-control input-sm" type="text" name="spawnSpeed" value="<%=room.spawnSpeed%>"/></div>
+    <div><span>% Положительных&nbsp;</span><input class="form-control input-sm" type="text" name="percent_profit" value="<%=room.percent_profit%>"/></div>
+    <div><span>% Нейтральных&nbsp;</span><input class="form-control input-sm" type="text" name="percent_null" value="<%=room.percent_null%>"/></div>
+    <div><span>% Отрицательных&nbsp;</span><input class="form-control input-sm" type="text" name="percent_minus" value="<%=room.percent_minus%>"/></div>
+    <div><button type="button" class="btn btn-danger btn-save-room">Сохранить</button></div>
+</form>

@@ -1,0 +1,6 @@
+<h4>Топ игроков</h4>
+<ol>
+    <% users.forEach(function(user){ %>
+    <li><%=user.displayName%> : <%=user.balance%></li>
+    <% }); %>
+</ol>

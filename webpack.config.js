@@ -1,9 +1,14 @@
+var webpack = require('webpack');
 var path = require('path');
-var BowerWebpackPlugin = require("bower-webpack-plugin");
-var webpack = require("webpack");
+var HtmlWebpackPlugin = require('html-webpack-plugin');
+var OpenBrowserPlugin = require('open-browser-webpack-plugin');
 
+const BUILD_DIR = path.resolve(__dirname, 'build');
+const APP_DIR = path.resolve(__dirname, 'app');
 
-const DEBUG = true;
+const DEBUG = (process.env.BUILD_DEV || 'true') === 'true';
+const VERBOSE = (process.env.VERBOSE || 'true') === 'true';
+
 const AUTOPREFIXER_BROWSERS = [
     'Android 2.3',
     'Android >= 4',
@@ -15,75 +20,68 @@ const AUTOPREFIXER_BROWSERS = [
     'Safari >= 7.1'
 ];
 
-module.exports =  {
-    cache: true,
-    debug : true,
+const GLOBALS = {
+    'process.env.NODE_ENV': DEBUG ? '"development"' : '"production"',
+    __DEV__: DEBUG
+};
 
-    stats: {
-        colors: true,
-        reasons: true,
-        hash: true,
-        version: true,
-        timings: true,
-        chunks: true,
-        chunkModules: true,
-        cached: true,
-        cachedAssets: true
-    },
 
-    context: path.join(__dirname, 'assets/src'),
-    entry: './main',
+const config = {
+
+    cacheDirectory: DEBUG,
+
+    entry: [
+        "bootstrap-webpack!./bootstrap.config.js",
+        "font-awesome-webpack!./font-awesome.config.js",
+        APP_DIR + '/client/main.js'
+    ],
+
     output: {
-        path: path.join(__dirname, './public'),
+        path: BUILD_DIR,
         filename: 'bundle.js'
     },
 
-    resolve : {
-        root: [],
-        alias : {
-            createjs: path.resolve("./bower_components/EaselJS/lib/easeljs-0.8.2.combined.js")
-        }
+    module : {
+        loaders : [
+            { test: /\.(eot|woff|woff2|ttf|svg|png|jpe?g|gif)(\?\S*)?$/
+                , loader: 'url?limit=100000&name=[name].[ext]'
+            },
+            {test: /\.less$/, loader: "style!css!less"},
+            {test: /\.css$/, loader: "style-loader!css-loader"}
+        ]
     },
     plugins: [
-        new BowerWebpackPlugin({
-            modulesDirectories: ["bower_components"],
-            manifestFiles: ['bower.json', '.bower.json', 'package.json'],
-            includes:           /.*/,
-            excludes:           [],
-            searchResolveModulesDirectories: true
+        new HtmlWebpackPlugin({
+            template : APP_DIR + '/client/index.html'
         }),
+      //  new OpenBrowserPlugin({ url: 'http://test10.tests.onalone.com/webpack-dev-server/' }),
         new webpack.ProvidePlugin({
-            jQuery: 'jquery',
-            $: 'jquery',
-            jquery: 'jquery',
-            "window.jQuery": "jquery",
-            _: 'underscore',
-            createjs : "createjs"
-        }),
-        new webpack.optimize.DedupePlugin(),
-        new webpack.optimize.OccurenceOrderPlugin(),
-        new webpack.optimize.AggressiveMergingPlugin(),
-        new webpack.IgnorePlugin(/vertx/),
-        new webpack.DefinePlugin({
-            'require.specified': 'require.resolve'
+            $: "jquery",
+            jQuery: "jquery",
+            "window.jQuery": "jquery"
         })
     ],
-    module: {
-        loaders: [
-            // **IMPORTANT** This is needed so that each bootstrap js file required by
-            // bootstrap-webpack has access to the jQuery object
-            { test: /bootstrap\/js\//, loader: 'imports?jQuery=jquery' },
-            {
-                test: /\.less$/,
-                loader: "style!css!less"
-            },
-            // Needed for the css-loader when [bootstrap-webpack](https://github.com/bline/bootstrap-webpack)
-            // loads bootstrap's css.
-            { test: /\.woff2(\?v=\d+\.\d+\.\d+)?$/,   loader: "url?limit=10000&minetype=application/font-woff" },
-            { test: /\.woff(\?v=\d+\.\d+\.\d+)?$/,   loader: "url?limit=10000&minetype=application/font-woff" },
-            { test: /\.ttf(\?v=\d+\.\d+\.\d+)?$/,    loader: "url?limit=10000&minetype=application/octet-stream" },
-            { test: /\.eot(\?v=\d+\.\d+\.\d+)?$/,    loader: "file" },
-            { test: /\.svg(\?v=\d+\.\d+\.\d+)?$/,    loader: "url?limit=10000&minetype=image/svg+xml" }
-        ]
+
+    resolve: {
+        root: [ APP_DIR, APP_DIR + '/views'],
+        modulesDirectories: ['node_modules'],
+        extensions: ['', '.webpack.js', '.web.js', '.js', '.jsx', '.json']
+    },
+
+    cache: DEBUG,
+    debug: DEBUG,
+
+    stats: {
+        colors: true,
+        reasons: DEBUG,
+        hash: VERBOSE,
+        version: VERBOSE,
+        timings: true,
+        chunks: VERBOSE,
+        chunkModules: VERBOSE,
+        cached: VERBOSE,
+        cachedAssets: VERBOSE
     }
 };
+
+module.exports = config;

@@ -16,6 +16,9 @@ var proxy = httpProxy.createProxyServer({
 });
 
 var server = http.createServer(function(req, res) {
+
+    console.log(req.url)
+
     if( req.url.indexOf('/api/v1/users') === 0 ) {
         return proxy.web(req, res, { target: 'http://localhost:4005' });
     }
@@ -45,6 +48,9 @@ var server = http.createServer(function(req, res) {
 });
 
 server.on('upgrade', function (req, socket, head) {
+
+    console.log(req.url);
+
     if( req.url.indexOf('/rooms') === 0 ) {
 
         var route = req.url.split('/');
@@ -68,5 +74,5 @@ server.on('upgrade', function (req, socket, head) {
     }
 });
 
-console.log("listening on port 3000");
-server.listen(3000);
+console.log("listening on port 5000");
+server.listen(5000);

@@ -36,10 +36,5 @@ module.exports = function(app, redisClient, mongoose, server, passport, callback
             res.redirect('/');
         });
 
-
-    app.get('/test', function(req, res) {
-        res.json({ auth : req.isAuthenticated() });
-    });
-
     return callback(null);
 };

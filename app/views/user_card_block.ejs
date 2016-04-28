@@ -1,0 +1,11 @@
+<div class="avatar" style="background:url('<%=user.photo%>') no-repeat center"></div>
+<h4 class="displayName"><%=user.displayName%>&nbsp;<i class="fa fa-edit btn btn-success btn-xs btn-edit-name"></i></h4>
+<input class="form-control input-displayName input-sm" />
+<div class="balance"><strong>$<%=user.balance%></strong></div>
+<div class="btn-group btn-group-xs">
+    <a title="Пополнить счет" type="button" class="btn btn-success btn-xs btn-invoice">Пополнить</a>
+    <a title="Пополнить счет" type="button" class="btn btn-danger btn-xs btn-payout">Вывести</a>
+</div>
+<% if(user.role === 'admin') { %>
+<button title="Настройки" type="button" class="btn btn-admin-settings btn-xs"><i class="fa fa-wrench"></i></button>
+<% } %>

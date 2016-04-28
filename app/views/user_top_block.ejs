@@ -1,0 +1,15 @@
+<h4>Топ игроков</h4>
+<div class="list container">
+    <% users.forEach(function(user){ %>
+    <div class="list-item list-item-player-top">
+        <div class="avatar-list-item pull-left"></div>
+        <h4><%=user.displayName%></h4>
+        <h5>Счет: <%=user.score%></h5>
+    </div>
+    <% }); %>
+</div>
+<div class="btn-group btn-group-sm">
+    <a title="Список комнат" href="#" class="btn btn-primary btn-room-list">Комнаты</a>
+    <a title="Пополнить счет" href="#" class="btn btn-success btn-donate">Купить $</a>
+    <a title="Выйти из приложения" href="/logout" class="btn btn-danger btn-exit">Выход</a>
+</div>

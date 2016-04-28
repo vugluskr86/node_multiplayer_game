@@ -1,0 +1,36 @@
+<button type="button" class="btn btn-default btn-window-close"><i class="fa fa-close"></i></button>
+<h4>Профиль</h4>
+<div>
+    <ul class="nav nav-tabs" role="tablist">
+        <li role="presentation" class="active"><a href="#profile-invoices" aria-controls="home" role="tab" data-toggle="tab">Пополнить</a></li>
+        <li role="presentation"><a href="#profile-payouts" aria-controls="profile" role="tab" data-toggle="tab">Вывести</a></li>
+        <li role="presentation"><a href="#profile-history" aria-controls="messages" role="tab" data-toggle="tab">История</a></li>
+        <li role="presentation"><a href="#profile-settings" aria-controls="settings" role="tab" data-toggle="tab">Настройки</a></li>
+    </ul>
+    <div class="tab-content">
+        <div role="tabpanel" class="tab-pane active" id="profile-invoices">
+            <div class="input-group input-group-sm">
+                <span class="input-group-addon">$</span>
+                <input type="text" class="form-control invoice" placeholder="100">
+                        <span class = "input-group-btn">
+                              <button class = "btn btn-success btn-create-invoice" type = "button">Пополнить</button>
+                        </span>
+            </div>
+        </div>
+        <div role="tabpanel" class="tab-pane" id="profile-payouts">
+            <div class="input-group input-group-sm">
+                <span class="input-group-addon">$</span>
+                <input type="text" class="form-control payout" placeholder="0">
+                        <span class = "input-group-btn">
+                              <button class = "btn btn-success btn-request-payout" type = "button">Запросить вывод</button>
+                        </span>
+            </div>
+        </div>
+        <div role="tabpanel" class="tab-pane" id="profile-history">
+
+        </div>
+        <div role="tabpanel" class="tab-pane" id="profile-settings">
+
+        </div>
+    </div>
+</div>

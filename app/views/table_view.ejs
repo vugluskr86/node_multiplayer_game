@@ -1,0 +1,71 @@
+<% if( typeof(head) !== "undefined" ) { %>
+<thead>
+<tr>
+    <% _.each(head, function(row) { %>
+    <td><%=row.name%></td>
+    <% }); %>
+</tr>
+</thead>
+<% } %>
+
+<% if( typeof(body) !== "undefined" ) { %>
+<tbody>
+<% _.each(body, function(row) { %>
+<tr>
+    <% Object.keys(row).forEach(function(k,i) {%>
+    <td><%=row[k]%></td>
+    <% }); %>
+</tr>
+<% }); %>
+</tbody>
+<% } %>
+
+<tfoot>
+<% if( typeof(foot) !== "undefined" ) { %>
+<tr>
+    <% _.each(foot, function(row) { %>
+    <td><%=row.name%></td>
+    <% }); %>
+</tr>
+<% } %>
+<% if( typeof(pagination) !== "undefined" && pagination.pages > 1 ) { %>
+<tr>
+    <td colspan="<%=(head !== undefined ? Object.keys(head).length : 0)%>">
+        <nav>
+            <ul class="pager">
+                <% if(pagination.prev) { %>
+                <li class="previous">
+                    <a href="#" class="prev" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                <% } else { %>
+                <li class="previous disabled">
+                    <a href="#" class="prev" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                <% } %>
+
+                <li>c <%= pagination.range[0] %> по <%= pagination.range[1] %> из <%= pagination.total %></li>
+
+                <% if(pagination.next) { %>
+                <li class="next">
+                    <a href="#" class="next" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <% } else { %>
+                <li class="next disabled">
+                    <a href="#" class="next" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <% } %>
+
+            </ul>
+        </nav>
+    </td>
+</tr>
+<% } %>
+</tfoot>

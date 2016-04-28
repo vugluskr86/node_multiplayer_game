@@ -1,0 +1,14 @@
+<h4><%=room.name%></h4>
+<div>
+    <span>Игроков: <span><%=room.players ? room.players.length : 0%></span></span>
+    <span>Фигур: <span><%=room.mobs ? room.mobs : 0%> из <%=room.maxMobs%></span></span>
+</div>
+<div class="btn-group btn-group-xs">
+    <% if(room._current) { %>
+    <button data-room-id="<%=room._id%>" title="Подключится к игре" class="btn btn-danger btn-xs btn-room-leave">Отключится</button>
+    <% } else { %>
+    <button data-room-id="<%=room._id%>" title="Подключится к игре" class="btn btn-success btn-xs btn-room-join">Играть</button>
+    <% } %>
+    <button data-room-id="<%=room._id%>" title="Подключится к игре" class="btn btn-success btn-xs btn-room-donate">Купить еденицы</button>
+    <a title="Выход" href="/logout" class="btn btn-danger btn-logout btn-xs">Выход</a>
+</div>

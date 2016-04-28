@@ -1,0 +1,37 @@
+<h4>Управление</h4>
+<table class="table list">
+    <thead>
+    <tr>
+        <th>Комната</th>
+        <th>Действия</th>
+    </tr>
+    </thead>
+    <tbody>
+    <% rooms.forEach(function(room){ %>
+    <tr>
+        <td><%=room.name%> (<%=room.players.length%>, <%=room.mobs%>)</td>
+        <td>
+            <div class="btn-group btn-group-xs">
+                <button title="Удалить комнату" class="btn btn-primary btn-room-remove"><i class="fa fa-remove"></i></button>
+                <button title="Остановить игру" class="btn btn-warning btn-room-stop"><i class="fa fa-stop"></i></button>
+                <button title="Перезапуск игры" class="btn btn-danger btn-room-restart"><i class="fa fa-refresh"></i></button>
+            </div>
+        </td>
+    </tr>
+    <% }); %>
+    </tbody>
+</table>
+<h4>Создать комнату</h4>
+<form class="form-add-room" method="post" action="/api/v1/rooms">
+    <input name="name" type="text" placeholder="Название">
+    <input name="complexity" type="text" placeholder="Сложность">
+    <input name="maxUsers" type="text" placeholder="Маск. игроков">
+    <input name="maxMobs" type="text" placeholder="Маск. фигур">
+    <input name="spawnSpeed" type="text" placeholder="Скорость появления фигур">
+    <button class="btn btn-info btn-block login" type="submit">Создать</button>
+</form>
+<div class="btn-group btn-group-sm">
+    <a title="Список комнат" href="#" class="btn btn-primary btn-players-top">Комнаты</a>
+    <a title="Топ игроков" href="#" class="btn btn-warning btn-donate">Игроки</a>
+    <a title="Выйти из приложения" href="/logout" class="btn btn-danger btn-exit">Выход</a>
+</div>
