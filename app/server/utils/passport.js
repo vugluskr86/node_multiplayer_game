@@ -2,7 +2,7 @@ var LocalStrategy    = require('passport-local').Strategy;
 var VKontakteStrategy = require('passport-vkontakte').Strategy;
 
 var User       = require('../models/user');
-var configAuth = require('./auth');
+var config = require('../config').get('auth');
 
 var mongoose = require('mongoose');
 
@@ -39,14 +39,13 @@ module.exports = function(passport) {
             process.nextTick(function() {
                 return User.findOne({ 'local.email' :  email }, function(err, user) {
                     if (err) {
-                        console.log(err);
                         return done(err);
                     }
                     if (!user) {
-                        return done(null, false, req.flash('loginMessage', 'No user found.'));
+                        return done(null, false, "UserNotFound");
                     }
                     if (!user.validPassword(password)) {
-                        return done(null, false, req.flash('loginMessage', 'Oops! Wrong password.'));
+                        return done(null, false, "InvalidPassword");
                     } else {
                         return done(null, user);
                     }
@@ -67,7 +66,7 @@ module.exports = function(passport) {
                         return done(err);
                     }
                     if (user) {
-                        return done(null, false, req.flash('signupMessage', 'That email is already taken.'));
+                        return done(null, false, "AlreadyTaken");
                     } else {
                         var newUser            = new User();
                         newUser.displayName = "New User";
@@ -87,9 +86,9 @@ module.exports = function(passport) {
         }));
 
     passport.use('vkontakte', new VKontakteStrategy({
-            clientID: configAuth.vkAuth.clientID,
-            clientSecret: configAuth.vkAuth.clientSecret,
-            callbackURL: configAuth.vkAuth.callbackURL
+            clientID: config.vkAuth.clientID,
+            clientSecret: config.vkAuth.clientSecret,
+            callbackURL: config.vkAuth.callbackURL
         },
         function(req, accessToken, refreshToken, profile, done)
         {

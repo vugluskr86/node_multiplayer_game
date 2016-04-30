@@ -1,8 +1,10 @@
-var mongoose = require('mongoose');
+var mongoose = require('../utils/mongoose');
 var bcrypt   = require('bcrypt-nodejs');
 var mongoosePaginate = require('mongoose-paginate');
 
 var _ = require("underscore");
+var async = require("async");
+
 
 var userSchema = mongoose.Schema({
     displayName: {type: String},
@@ -42,10 +44,8 @@ var userSchema = mongoose.Schema({
     vk         : {
         id           : String,
         displayName  : String
-    },
-
-    created:    { type: Date, default : Date.now }
-});
+    }
+}, { timestamps: { createdAt: 'created', updatedAt: 'updated' } });
 
 userSchema.methods.generateHash = function(password) {
     return bcrypt.hashSync(password, bcrypt.genSaltSync(8), null);
@@ -72,5 +72,49 @@ userSchema.statics.unban = function(options, callback) {
     _.extend(q, { ban : true });
     return mongoose.model('User').update(q, { ban : false }).exec(callback);
 };
+
+// получение статистики по регистрации пользователей
+userSchema.statics.getRegistrationStatistic = function(options, callback) {
+    var UserModel = mongoose.model('User');
+    return async.waterfall({
+        days : function(next) {
+            UserModel.aggregate([
+                {
+                    $group:
+                    {
+                        _id: { day: { $dayOfMonth: "$created" },  month: { $month: "$created" }, year: { $year: "$created" } },
+                        count: { $sum: 1 }
+                    }
+                }
+            ], next);
+        },
+        week : function(next) {
+            UserModel.aggregate([
+                {
+                    $group:
+                    {
+                        _id: { week: { $week: "$date" }, year: { $year: "$created" } },
+                        count: { $sum: 1 }
+                    }
+                }
+            ], next);
+        },
+        mounth : function(next) {
+            UserModel.aggregate([
+                {
+                    $group:
+                    {
+                        _id: { month: { $month: "$created" }, year: { $year: "$created" } },
+                        count: { $sum: 1 }
+                    }
+                }
+            ], next);
+        },
+        all : function(next) {
+            UserModel.find({}).count(next);
+        }
+    }, callback);
+};
+
 
 module.exports = mongoose.model('User', userSchema);

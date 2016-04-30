@@ -1,72 +1,116 @@
-if( process.argv.length < 4 ) {
-    throw "Process arguments error";
-}
-
 var express = require("express"),
     http = require("http"),
     path = require('path'),
     favicon = require('serve-favicon'),
-    logger = require('morgan'),
     cookieParser = require('cookie-parser'),
     bodyParser = require('body-parser'),
     session      = require('express-session'),
     passport = require('passport'),
-    mongoose = require('mongoose'),
-    configDB = require('../config/database.js'),
+    mongoose = require('../utils/mongoose'),
     redis = require("redis"),
     async = require("async"),
-    passportConfig = require('../config/passport'),
-    MongoStore = require('connect-mongo')(session);
+    passportConfig = require('../utils/passport'),
+    MongoStore = require('connect-mongo')(session),
+    log4js = require('../utils/log'),
+    log = log4js.getLogger(),
+    allowCrossDomain = require('../utils/mw/allowCrossDomain'),
+    optimist = require('optimist'),
+    _ = require("underscore");
+
+var daemon = {
+
+    config : {
+        port : 3000,
+        service : ""
+    },
+
+    initialize : function() {
+
+        log.debug("initialize")
+
+        _.bindAll(this, 'createServer', '_handleServerCreate');
+
+        this.argv = optimist.argv;
+
+        if( Object.keys(this.argv).length < 2  ) {
+            log.error("undefined process args");
+        }
+
+        this.config.service = this.argv["service"];
+        this.config.port = this.argv["port"];
+
+        this.serviceMw = require("../services/" + this.config.service);
+
+        this.redisClient = redis.createClient();
+
+     //   mongoose.connect(configDB.url);
+
+        this.app = express();
 
 
-var _app = require("../" + process.argv[2]);
-var port = parseInt(process.argv[3]);
+        this.app.use(log4js.connectLogger(log, { level: log4js.levels.INFO }));
+        this.app.use(bodyParser.json());
+        this.app.use(bodyParser.urlencoded({extended: true}));
+        this.app.use(cookieParser());
+        this.app.use(session({
+            key: 'session',
+            secret: 'keyboard cat',
+            resave: true,
+            saveUninitialized: true,
+            cookie: {maxAge: 24*60*60*1000},
+            secure: false,
+            httpOnly: false,
+            store: new MongoStore({ mongooseConnection: mongoose.connection })
+        }));
 
-if( isNaN(port) ) {
-    throw "Process listen port error";
-}
+       // this.app(allowCrossDomain);
 
-var redisClient = redis.createClient();
+        passportConfig(passport);
 
-mongoose.connect(configDB.url);
+        this.app.use(passport.initialize());
+        this.app.use(passport.session());
 
+        this.createServer();
+    },
 
-var allowCrossDomain = function(req, res, next) {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
-    next();
+    createServer:  function() {
+
+        log.debug("createServer")
+
+        this.serviceMw(this.app, this.redisClient, mongoose, passport, this._handleServerCreate);
+    },
+
+    _handleServerCreate: function(err, options) {
+        // FIXME
+        if( err ) {
+            log.error(log);
+        }
+
+        log.debug(options)
+
+        if( options && options["createServer"] ) {
+            log.debug("create server", options["createServer"]);
+            this.server = http.createServer(this.app);
+
+            this.server.listen(this.config.port, "localhost", function() {
+                log.info(this.config.service + " listening on localhost:" + this.config.port)
+            }.bind(this));
+        } else {
+            this.app.listen(this.config.port, "localhost", function() {
+                log.info(this.config.service + " listening on localhost:" + this.config.port)
+            }.bind(this));
+        }
+    }
 };
 
-var app = express();
+log.debug('initialize');
+daemon.initialize();
 
-app.use(logger('dev'));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended: true}));
-app.use(cookieParser());
-app.use(session({
-    key: 'session',
-    secret: 'keyboard cat',
-    resave: true,
-    saveUninitialized: true,
-    store: new MongoStore({ mongooseConnection: mongoose.connection }),
-    cookie: {maxAge: 24*60*60*1000},
-    secure: false,
-    httpOnly: false
-}));
-
-app.use(allowCrossDomain);
-
-passportConfig(passport);
-app.use(passport.initialize());
-app.use(passport.session());
-
-var server = http.createServer(app);
-
+/*
 _app(app, redisClient, mongoose, server, passport, function() {
     server.listen(port, "localhost", function() {
-        console.log(process.argv[2] + " listening on localhost:" + port);
+        log.info(serviceName + " listening on localhost:" + port)
     });
 });
-
+*/
 

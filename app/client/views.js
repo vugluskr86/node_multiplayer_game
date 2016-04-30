@@ -7,10 +7,31 @@
         require('underscore'),
         require('jquery'),
         require('backbone'),
-        require('bootstrap-notify')
+
+        require('table_view.ejs'),
+        require('room_admin_block.ejs'),
+        require('login_block.ejs'),
+        require('signup_block.ejs'),
+        require('user_card_block.ejs'),
+        require('room_block.ejs'),
+        require('top_view.ejs'),
+        require('admin_page_view.ejs'),
+        require('profile_view.ejs'),
+
+        require('bootstrap-notify'),
+        require('backbone-forms')
     );
 
-}(this, function (root, Module, _, $, Backbone) {
+}(this, function (root, Module, _, $, Backbone,
+                  table_view,
+                  room_admin_block,
+                  login_block,
+                  signup_block,
+                  user_card_block,
+                  room_block,
+                  top_view,
+                  admin_page_view,
+                  profile_view) {
     'use strict';
 
     var Table =  Backbone.View.extend({
@@ -21,6 +42,8 @@
 
         elName : "table",
 
+        template : table_view,
+
         events: {
             'click a.prev': 'previous',
             'click a.next': 'next',
@@ -28,8 +51,6 @@
         },
 
         initialize: function(options) {
-            this.template = _.template( $('#template-table-view').html() );
-
             _.bindAll(this, 'render', '_filterRow', 'previous', 'next', 'render', '_renderActionButtons', '_clickActionButton');
 
             this.options = {
@@ -134,6 +155,15 @@
         },
 
         _handleResizeWindow: function() {
+
+            this.$el.css("min-width", this.options.width + "px");
+            this.$el.css("min-height", this.options.height + "px");
+
+            var width  = this.$el.width() > 0 ? this.$el.width() : this.options.width;
+            var height = this.$el.height() > 0 ? this.$el.height() : this.options.height;
+
+         //   console.log(width, height);
+
             switch (this.options.valign) {
                 case "top":
                 {
@@ -142,13 +172,13 @@
                 }
                 case "bottom":
                 {
-                    this.top = window.innerHeight - this.options.height - this.options.margin;
+                    this.top = window.innerHeight - height - this.options.margin;
                     break;
                 }
                 case "center":
                 default:
                 {
-                    this.top = (window.innerHeight / 2) - (this.options.height / 2);
+                    this.top = (window.innerHeight / 2) - (height / 2);
                     break;
                 }
             }
@@ -161,20 +191,20 @@
                 }
                 case "right":
                 {
-                    this.left = window.innerWidth - this.options.width - this.options.margin;
+                    this.left = window.innerWidth - width - this.options.margin;
                     break;
                 }
                 case "center":
                 default:
                 {
-                    this.left = window.innerWidth / 2 - this.options.width / 2;
+                    this.left = window.innerWidth / 2 - (width / 2);
                     break;
                 }
             }
 
             this.$el.css({
-                'width': this.options.width + 'px',
-                'height': this.options.height + 'px',
+        //        'width': this.options.width + 'px',
+      //          'height': this.options.height + 'px',
                 'top':  this.top + 'px',
                 'left': this.left + 'px',
                 'position': 'absolute',
@@ -195,50 +225,66 @@
             "click .btn-spawn": "_handleClickSpawn"
         },
 
+        template : room_admin_block,
+
         initialize: function(options) {
             _.bindAll(this,
                 '_handleRoomChange',  '_handleClickSaveRoom',
-                '_handleClickSpawn');
+                '_handleClickSpawn', 'render', '_setModelEvent');
 
             this.options = options;
-            this.template = _.template( $('#template-room-admin-block').html() );
+
+            this.form = new Backbone.Form({
+                schema: {
+                    name: 'Text',
+                    complexity: { type: 'Select', options: ['simple', 'middle', 'hard'] },
+                    maxUsers: 'Number',
+                    maxMobs: 'Number',
+                    spawnSpeed: 'Number',
+                    percent_profit: 'Number',
+                    percent_null: 'Number',
+                    percent_minus: 'Number'
+                }
+            });
+
+            this.form.render();
             this.render();
 
-            this.model.listenTo(this.model, 'change', this._handleRoomChange);
+            var updateEvents = [
+                "name", "complexity", "maxUsers",
+                "maxMobs", "spawnSpeed", "percent_profit",
+                "percent_null", "percent_minus"
+            ];
+
+            updateEvents.forEach( this._setModelEvent.bind(this) );
+        },
+
+        _setModelEvent: function(field) {
+            this.model.listenTo(this.model, "change:" + field, this._handleRoomChange.bind(this, field));
         },
 
         render: function() {
             this.$el.html( this.template({ room : this.model.toJSON() }) );
+            this.$el.find('.form-container').append(this.form.$el);
         },
 
-
-        _handleRoomChange : function() {
-            this.render();
+        _handleRoomChange : function(field, model, name) {
+            var data = {};
+            data[field] = name;
+            this.form.setValue(data);
         },
 
         _handleClickSaveRoom: function(e) {
             e.preventDefault();
-            var data = this.$el.find('.form-room-settings').serializeArray(),
-                update = {};
 
-            const _filter = {
-                "name" : function(v) { return v },
-                "complexity" : function(v) { return v },
-                "maxUsers" : function(v) { return parseInt(v) },
-                "maxMobs" : function(v) { return parseInt(v) },
-                "spawnSpeed" : function(v) { return parseFloat(v) },
-                "percent_profit" : function(v) { return parseFloat(v) },
-                "percent_null" : function(v) { return parseFloat(v) },
-                "percent_minus" : function(v) { return parseFloat(v) }
-            };
+            var errors = this.form.validate();
 
-            data.forEach(function(v) {
-                if(_.isFunction( _filter[v.name] ) ) {
-                    update[v.name] = _filter[v.name](v.value);
-                }
-            });
-
-            this.model.save(update);
+            if( errors ) {
+                console.log(errors)
+            } else {
+                console.log(this.form.getValue())
+                this.model.save(this.form.getValue());
+            }
         },
 
         _handleClickSpawn: function(e) {
@@ -251,15 +297,16 @@
 
         LoginBlockView : WindowView.extend({
             events: {
-                "click a.link-need-account" : "_handleNeedAccountClick"
+                "click a.link-need-account" : "_handleNeedAccountClick",
+                "submit form" : "_handleSubmit"
             },
+
+            template : login_block,
 
             initialize: function(options) {
                 this.__proto__.constructor.__super__.initialize.apply(this, arguments);
 
-                _.bindAll(this, '_handleNeedAccountClick', 'render');
-
-                this.template = _.template( $('#template-login-block').html() );
+                _.bindAll(this, '_handleNeedAccountClick', 'render', '_handleSubmit');
 
                 this.render();
             },
@@ -271,22 +318,48 @@
             _handleNeedAccountClick: function(e) {
                 e.preventDefault();
                 this.trigger('sign')
+            },
+
+            _handleSubmit: function(e) {
+                e.preventDefault();
+
+                var $form = this.$el.find('form');
+
+                this.model.login(
+                    $form.find('input[name="email"]').val(),
+                    $form.find('input[name="password"]').val()
+                );
             }
         }),
 
         SignBlockView : WindowView.extend({
+            events: {
+                "submit form" : "_handleSubmit"
+            },
+
+            template : signup_block,
+
             initialize: function(options) {
                 this.__proto__.constructor.__super__.initialize.apply(this, arguments);
 
-                _.bindAll(this, 'render');
-
-                this.template = _.template( $('#template-signup-block').html() );
+                _.bindAll(this, 'render', '_handleSubmit');
 
                 this.render();
             },
 
             render: function() {
                 this.$el.html( this.template({}) );
+            },
+
+            _handleSubmit: function(e) {
+                e.preventDefault();
+
+                var $form = this.$el.find('form');
+
+                this.model.createUser(
+                    $form.find('input[name="email"]').val(),
+                    $form.find('input[name="password"]').val()
+                );
             }
         }),
 
@@ -294,6 +367,8 @@
             attributes : {
                 "class" : "block-container user-card"
             },
+
+            template : user_card_block,
 
             events: {
                 "click .btn-admin-settings" : "_handleClickAdminSettings",
@@ -311,8 +386,6 @@
                     '_handleClickEditName', '_handleClickInvoice', '_handleClickPayout');
 
                 this.options = options;
-
-                this.template = _.template( $('#template-user-card-block').html() );
 
                 this.model.listenTo(this.model, 'change', this._handleUserChange);
             },
@@ -403,6 +476,8 @@
                 "click .btn-room-donate" : "_handleClickDonate"
             },
 
+            template : room_block,
+
             initialize: function(options) {
                 this.__proto__.constructor.__super__.initialize.apply(this, arguments);
 
@@ -412,17 +487,18 @@
 
                 this.options = options;
                 this.userModel  = this.options.userModel;
-                this.template = _.template( $('#template-room-block').html() );
 
-                this.render();
+         //       this.render();
 
                 this.model.listenTo(this.model, 'reset change', this._handleRoomChange);
-                this.userModel.listenTo(this.userModel, 'reset change', this._handleUserChange);
+        //        this.userModel.listenTo(this.userModel, 'reset change', this._handleUserChange);
             },
 
             render: function() {
                 var model = this.model.toJSON(),
                     userid = this.userModel.get('_id');
+
+             //   console.log(model)
 
                 if( model.players && userid && model.players.indexOf(userid) !== -1 ) {
                     _.extend(model, { _current : true })
@@ -475,7 +551,17 @@
             },
 
             _notify: function( message ) {
-                this.$el.notify(message.toJSON()).show(); // for the ones that aren't closable and don't fade out there is a .hide() function.
+                var notify = message.toJSON();
+
+                $.notify({
+                    message : notify.message
+                }, {
+                    placement: {
+                        from: "bottom",
+                        align: "right"
+                    },
+                    type : notify.type
+                });
 
                 this.collection.reset([]);
             }
@@ -487,12 +573,12 @@
                 "class" : "room-user-list block-container"
             },
 
+            template : top_view,
+
             initialize: function(options) {
                 this.__proto__.constructor.__super__.initialize.apply(this, arguments);
 
                 _.bindAll(this, 'render');
-
-                this.template = _.template( $('#template-top-view').html() );
 
                 this.collection.listenTo(this.collection, 'reset', this.render);
 
@@ -510,12 +596,12 @@
             payouts : new Backbone.Collection(),
             users : new Backbone.Collection(),
 
+            template : admin_page_view,
+
             initialize: function(options) {
                 this.__proto__.constructor.__super__.initialize.apply(this, arguments);
 
                 _.bindAll(this, 'render');
-
-                this.template = _.template( $('#template-admin-page-view').html() );
 
                 if( options.invoices ) { this.invoices = options.invoices; }
                 if( options.payouts ) { this.payouts = options.payouts; }
@@ -678,16 +764,12 @@
             payouts : new Backbone.Collection(),
             history : new Backbone.Collection(),
 
+            template : profile_view,
+
             initialize: function(options) {
                 this.__proto__.constructor.__super__.initialize.apply(this, arguments);
 
-                console.log(WindowView.prototype.events)
-
-                //  _.extend(this.events, WindowView.prototype.events);
-
                 _.bindAll(this, 'render', '_update', '_handleCreateInvoice', '_handleRequestPayout');
-
-                this.template = _.template( $('#template-profile-view').html() );
 
                 if( options.invoices ) { this.invoices = options.invoices; }
                 if( options.payouts ) { this.payouts = options.payouts; }

@@ -5,6 +5,7 @@ var OpenBrowserPlugin = require('open-browser-webpack-plugin');
 
 const BUILD_DIR = path.resolve(__dirname, 'build');
 const APP_DIR = path.resolve(__dirname, 'app');
+const ASSETS_DIR = path.resolve(__dirname, 'assets');
 
 const DEBUG = (process.env.BUILD_DEV || 'true') === 'true';
 const VERBOSE = (process.env.VERBOSE || 'true') === 'true';
@@ -46,20 +47,23 @@ const config = {
             { test: /\.(eot|woff|woff2|ttf|svg|png|jpe?g|gif)(\?\S*)?$/
                 , loader: 'url?limit=100000&name=[name].[ext]'
             },
-            {test: /\.less$/, loader: "style!css!less"},
-            {test: /\.css$/, loader: "style-loader!css-loader"}
+            { test: /\.less$/, loader: "style!css!less" },
+            { test: /\.css$/, loader: "style-loader!css-loader" },
+            { test: /\.ejs$/, loader: "ejs-loader" },
+            { test : /bootstrap-notify/, loader : 'imports?underscore,jquery,bootstrap' }
         ]
     },
     plugins: [
         new HtmlWebpackPlugin({
-            template : APP_DIR + '/client/index.html'
+            template : ASSETS_DIR + '/index.html'
         }),
       //  new OpenBrowserPlugin({ url: 'http://test10.tests.onalone.com/webpack-dev-server/' }),
         new webpack.ProvidePlugin({
             $: "jquery",
             jQuery: "jquery",
-            "window.jQuery": "jquery"
-        })
+            "window.jQuery": "jquery",
+            _: "underscore"
+        }),
     ],
 
     resolve: {

@@ -105,15 +105,16 @@
             _.bindAll(this, '_calc', '_update');
         },
 
-        _calc : function(dt) {
-            var physic = this.toJSON();
+        _calc : function(time) {
+            var options = this.toJSON();
 
-         //   console.log(dt)
+            var distance = options.speed * ( options.created + time ) / 1000;
 
-            this.set('x', physic.center.x + Math.sin(physic.life) * physic.r_x * Math.sin(physic.life), {silent: true});
-            this.set('y', physic.center.y + Math.cos(physic.life) * physic.r_y * Math.sin(physic.life), {silent: true});
+            var x = options.center.x + Math.sin(distance) * options.r_x * Math.sin(distance);
+            var y = options.center.y + Math.cos(distance) * options.r_y * Math.sin(distance);
 
-            this.set('life', this.get('life') + (dt / 1000 * physic.speed));
+            this.set('x', x);
+            this.set('y', y);
         },
 
         _update : function() {
@@ -124,7 +125,6 @@
                 if( shape._childText ) {
                     shape._childText.rotation = -_rot;
                 }
-
                 shape.rotation = _rot;
                 shape.x = this.get('x');
                 shape.y = this.get('y');
@@ -137,6 +137,7 @@
     });
 
     var RoomModel = Backbone.Model.extend({
+
         url : function() {
 
             if(this.isNew()) {
@@ -146,13 +147,16 @@
             return API_PREFIX + "rooms/" + this.id;
         },
 
-        mobs : new MobsCollection(),
+        _mobsCache : new MobsCollection(),
 
         _connectState : 'DISCONNECTED',
 
         initialize : function() {
-            _.bindAll(this, 'subscribe', 'join', 'leave', 'click', '_connect',
-                '_handleSocketMessage', '_handleClose', '_handleError', '_handleOpen');
+            _.bindAll(this, 'subscribe', 'join', 'leave',
+                'click', '_connect', '_handleSocketMessage',
+                '_handleClose', '_handleError', '_handleOpen', '_handleUpdateMobs');
+
+          //  this.listenTo(this, 'update:mobs', this._handleUpdateMobs);
         },
 
         join: function( options ) {
@@ -191,41 +195,46 @@
             this._connect(roomId);
         },
 
+        _handleUpdateMobs: function() {
+          //  this._mobsCache = this.get('mobs');
+        },
+
         _handleSocketMessage: function(event) {
             var packet = JSON.parse(event.data);
             if( packet ) {
                 switch (packet.id) {
                     case "fillRoom": {
-                        this.mobs.add(packet.data.options, { silent : true });
-                        this.mobs.add(packet.data.data, { silent : true });
-                        this.trigger('fillRoom');
+                        this._mobsCache.reset(packet.data);
                         break;
                     }
                     case "updateMobsData": {
-                        this.mobs.add(packet.data, {merge: true});
-                        this.trigger('updateMobsData');
+                        this._mobsCache.add(packet.data, {merge: true});
                         break;
                     }
                     case "removeMob": {
-                        this.mobs.remove({ id : packet.data });
-                        this.set('mobs', this.get('mobs') - 1);
+                        console.log(packet);
+                        this._mobsCache.remove({ id : packet.data });
                         this.trigger('removeMob');
+                        this.fetch();
                         break;
                     }
                     case "spawnMob" : {
-                        var mobData = _.clone(packet.data.options);
-                        _.extend(mobData, packet.data.data);
-                        this.mobs.add(mobData);
-                        this.set('mobs', this.get('mobs') + 1);
+                        this._mobsCache.add(packet.data);
                         this.trigger('spawnMob');
+                        this.fetch();
                         break;
                     }
                     case "UserBalanceUpdated": {
+                        console.log(packet);
                         this.trigger('UserBalanceUpdated');
                         break;
                     }
+                    case "updateRoom" : {
+                        this._mobsCache.reset([]);
+                        this.fetch();
+                        break;
+                    }
                     case "error": {
-                        //console.log(packet)
                         this.trigger('ErrorMessage', packet.message);
                         break;
                     }
@@ -236,7 +245,7 @@
         _connect: function(roomId) {
             if( this.socket ) {
                 this.socket.close();
-                this.mobs.reset([]);
+                this._mobsCache.reset([]);
                 this.trigger('clear');
             }
 
@@ -335,6 +344,40 @@
                     this.set('ban', false);
                 }.bind(this)
             });
+        },
+
+        login: function(email, password) {
+            $.ajax({
+                url : '/login',
+                type : 'post',
+                data : {
+                    email: email,
+                    password: password
+                },
+                success : function(data) {
+                    if( data.err ) {
+                        return this.trigger('auth-error', data.err);
+                    }
+                    window.location.reload();
+                }.bind(this)
+            });
+        },
+
+        createUser: function(email, password) {
+            $.ajax({
+                url : '/signup',
+                type : 'post',
+                data : {
+                    email: email,
+                    password: password
+                },
+                success : function(data) {
+                    if( data.err ) {
+                        return this.trigger('auth-error', data.err);
+                    }
+                    window.location.reload();
+                }.bind(this)
+            });
         }
     });
 
@@ -342,8 +385,6 @@
     var TopCollection = Backbone.Collection.extend({
         url : API_PREFIX + "top"
     });
-
-
 
     var ModelAccounting = Backbone.Model.extend({
         initialize : function(options) {

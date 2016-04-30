@@ -6,13 +6,12 @@
         exports,
         require('underscore'),
         require('jquery'),
-        require('backbone')
+        require('backbone'),
+        require('easeljs-loader!./libs/easeljs-0.8.2.combined.js')
     );
 
-}(this, function (root, Module, _, $, Backbone) {
+}(this, function (root, Module, _, $, Backbone, easeljs) {
     'use strict';
-
-
 
     var GameFieldView = Backbone.View.extend({
 
@@ -48,8 +47,7 @@
                 '_handleMouseUp', '_handleMouseDown', '_drawGrid',
                 '_loop', '_initRender',
                 '_constructSceneObject', '_initGrid', '_handleAddGameObject',
-                '_handleResetGameObjects', '_handleUpdateGameObject', '_handleRemoveGameObject',
-                '_handleClickObject');
+                '_handleResetGameObjects', '_handleRemoveGameObject', '_handleClickObject');
 
             this.canvas = this.$el[0];
 
@@ -64,32 +62,28 @@
             $(window).on('resize', this._handleResizeCanvas);
             this._handleResizeCanvas();
 
-            createjs.Ticker.timingMode = createjs.Ticker.RAF_SYNCHED;
-            createjs.Ticker.setFPS(25);
-            createjs.Ticker.addEventListener("tick", this._loop);
+            easeljs.Ticker.timingMode = easeljs.Ticker.RAF_SYNCHED;
+            easeljs.Ticker.setFPS(25);
+            easeljs.Ticker.addEventListener("tick", this._loop);
 
-            //this._loop();
-
-            this.listenTo(this.model, 'fillRoom', this._handleResetGameObjects);
-            this.listenTo(this.model, 'updateMobsData', this._handleUpdateGameObject);
-
-            this.listenTo(this.model.mobs, 'remove', this._handleRemoveGameObject);
-            this.listenTo(this.model.mobs, 'add', this._handleAddGameObject);
+            this.listenTo(this.model._mobsCache, 'reset', this._handleResetGameObjects);
+            this.listenTo(this.model._mobsCache, 'remove', this._handleRemoveGameObject);
+            this.listenTo(this.model._mobsCache, 'add', this._handleAddGameObject);
         },
 
         _initRender: function() {
-            this.stage = new createjs.Stage(this.canvas);
+            this.stage = new easeljs.Stage(this.canvas);
             this.stage.snapPixelsEnabled = true;
             this.stage.enableMouseOver();
 
             this._initGrid();
 
-            this.worldView = new createjs.Container();
+            this.worldView = new easeljs.Container();
             this.stage.addChild(this.worldView);
         },
 
         _initGrid: function() {
-            this.gridView = new createjs.Shape();
+            this.gridView = new easeljs.Shape();
             this.gridView.snapToPixel = true;
             this.gridView.mouseEnabled = true;
 
@@ -173,8 +167,9 @@
 
 
         _loop: function (event) {
-            this.model.mobs.forEach(function(object) {
-                object._calc(event.delta);
+
+            this.model._mobsCache.each(function(object) {
+                object._calc(event.timeStamp);
                 object._update();
             }.bind(this));
 
@@ -187,8 +182,8 @@
 
 
         _constructSceneObject: function(object) {
-            var container = new createjs.Container();
-            var rect = new createjs.Shape();
+            var container = new easeljs.Container();
+            var rect = new easeljs.Shape();
             switch (object.prototype.view.type) {
                 case "box": {
                     rect.graphics
@@ -232,9 +227,9 @@
 
             if( object.text ) {
 
-                var _contText = new createjs.Container("text");
+                var _contText = new easeljs.Container("text");
 
-                var t1 = new createjs.Text(object.text, "12px Arial", "#000");
+                var t1 = new easeljs.Text(object.text, "12px Arial", "#000");
                 t1.outline = 3;
 
                 var t2 = t1.clone();
@@ -316,24 +311,17 @@
 
             this.views = [];
 
-            this.model.mobs.forEach(function(object) {
+            var mobsList = this.model._mobsCache;
+
+            mobsList.each(function(object) {
                 var shape = this._constructSceneObject(object.toJSON());
-
                 object.set('shape', shape);
-
                 shape.addEventListener('mousedown', this._handleClickObject);
                 this.worldView.addChild(shape);
-
-                this.views.push({ id : object.id, view : shape })
+                this.views.push({ id : object.get('id'), view : shape })
             }.bind(this));
 
             this._sleep = false;
-        },
-
-        _handleUpdateGameObject: function() {
-            this.model.mobs.forEach(function(object) {
-                object._update();
-            }.bind(this));
         },
 
         _handleRemoveGameObject: function(model) {

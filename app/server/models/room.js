@@ -1,4 +1,4 @@
-var mongoose = require('mongoose');
+var mongoose = require('../utils/mongoose');
 var bcrypt   = require('bcrypt-nodejs');
 
 var roomSchema = mongoose.Schema({
@@ -15,13 +15,18 @@ var roomSchema = mongoose.Schema({
     percent_null : {type: Number, default : 20},
     percent_minus : {type: Number, default : 50},
 
-    mobs : {type: Number, default : 0},
+  //  mobs : {type: Number, default : 0},
+
+    mobs: [ mongoose.Schema.Types.Mixed ],
+
     players: { type : Array, default : []},
+
+    mobsCounterIndex : {type: Number, default : 0},
 
     // информация процесса
     state : { type: String, default : "stop" },
     pid : { type: Number },
     port : { type: Number }
-});
+}, { timestamps: { createdAt: 'created', updatedAt: 'updated' } });
 
 module.exports = mongoose.model('Room', roomSchema);

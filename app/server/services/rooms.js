@@ -1,14 +1,16 @@
 var async = require("async");
-module.exports = function (app, redisClient, mongoose, server, passport, callback) {
+module.exports = function (app, redisClient, mongoose, passport, callback) {
     const API_PREFIX = "/api/v1/";
 
-    var UserModel = require('./models/user');
-    var RoomModel = require('./models/room');
-    var provideHttp = require('./mw/provideHttp');
-    var isAuthenticated = require('./mw/isAuthenticated');
-    var isAuthenticatedAdmin = require('./mw/isAuthenticatedAdmin');
+    var UserModel = require('../models/user');
+    var RoomModel = require('../models/room');
+    var provideHttp = require('../utils/mw/provideHttp');
+    var isAuthenticated = require('../utils/mw/isAuthenticated');
+    var isAuthenticatedAdmin = require('../utils/mw/isAuthenticatedAdmin');
 
-    var _ = require("underscore");
+    var _ = require("underscore"),
+        log4js = require('../utils/log'),
+        log = log4js.getLogger();
 
     /*
     var startPort = 3010;
@@ -86,7 +88,7 @@ module.exports = function (app, redisClient, mongoose, server, passport, callbac
             user_condition = { _id : userid },
             user_update = { currentRoom : roomid };
 
-        console.log("join", userid, roomid);
+        log.debug("join", userid, roomid);
 
         redisClient.setnx("user:" + userid.toString() + ":currentRoom", roomid.toString(), function(err, result) {
             if( err ) {
@@ -121,6 +123,7 @@ module.exports = function (app, redisClient, mongoose, server, passport, callbac
             user_condition = { _id : userid },
             user_update = { currentRoom : null };
 
+        log.debug("leave", userid, roomid);
 
         return redisClient.del("user:" + userid.toString() + ":currentRoom", function(err, result){
             if( err ) {
@@ -189,5 +192,5 @@ module.exports = function (app, redisClient, mongoose, server, passport, callbac
     });
 
 
-    return callback(null);
+    return callback(null, { createServer : true });
 };

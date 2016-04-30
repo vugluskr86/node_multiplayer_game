@@ -1,12 +1,12 @@
-module.exports = function (app, redisClient, mongoose, server, passport, callback) {
+module.exports = function (app, redisClient, mongoose, passport, callback) {
     const API_PREFIX = "/api/v1/";
 
-    var UserModel = require('./models/user');
-    var AccountModel = require('./models/accounting');
-    var UserHistoryModel = require('./models/userHistory');
-    var provideHttp = require('./mw/provideHttp');
-    var isAuthenticated = require('./mw/isAuthenticated');
-    var isAuthenticatedAdmin = require('./mw/isAuthenticatedAdmin');
+    var UserModel = require('../models/user');
+    var AccountModel = require('../models/accounting');
+    var UserHistoryModel = require('../models/userHistory');
+    var provideHttp = require('../utils/mw/provideHttp');
+    var isAuthenticated = require('../utils/mw/isAuthenticated');
+    var isAuthenticatedAdmin = require('../utils/mw/isAuthenticatedAdmin');
 
 
     app.post([ API_PREFIX + "invoices" ], isAuthenticated, function(req, res) {
@@ -89,5 +89,5 @@ module.exports = function (app, redisClient, mongoose, server, passport, callbac
 
 
 
-    return callback(null);
+    return callback(null, { createServer : true });
 };

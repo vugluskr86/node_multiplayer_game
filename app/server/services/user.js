@@ -1,12 +1,14 @@
-module.exports = function (app, redisClient, mongoose, server, passport, callback) {
+module.exports = function (app, redisClient, mongoose, passport, callback) {
     const API_PREFIX = "/api/v1/";
 
-    var _ = require("underscore");
+    var UserModel = require('../models/user');
+    var provideHttp = require('../utils/mw/provideHttp');
+    var isAuthenticated = require('../utils/mw/isAuthenticated');
+    var isAuthenticatedAdmin = require('../utils/mw/isAuthenticatedAdmin');
 
-    var UserModel = require('./models/user');
-    var provideHttp = require('./mw/provideHttp');
-    var isAuthenticated = require('./mw/isAuthenticated');
-    var isAuthenticatedAdmin = require('./mw/isAuthenticatedAdmin');
+    var _ = require("underscore"),
+        log4js = require('../utils/log'),
+        log = log4js.getLogger();
 
     // Endpoint : bootstrap
     app.get([ API_PREFIX + "bootstrap" ], function(req, res) {
@@ -14,8 +16,6 @@ module.exports = function (app, redisClient, mongoose, server, passport, callbac
             var auth = { auth : true},
                 user = req.user.toObject();
             _.extend(auth, user);
-
-            console.log(auth)
 
             return res.json(auth);
         } else {
@@ -79,5 +79,5 @@ module.exports = function (app, redisClient, mongoose, server, passport, callbac
             .exec(provideHttp.bind(null, res));
     });
 
-    return callback(null);
+    return callback(null, { createServer : true });
 };

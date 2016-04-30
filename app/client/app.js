@@ -9,7 +9,8 @@
         require('backbone'),
         require('./models'),
         require('./views'),
-        require('./game')
+        require('./game'),
+        require('easeljs-loader!./libs/soundjs-0.6.2.combined.js')
     );
 
 }(this, function (root, Module, _, $, Backbone, DataModule, ViewsModule, GameModule) {
@@ -22,9 +23,16 @@
         initialize : function() {
             _.bindAll(this,
                 '_handleUserLogOut', '_handleUserLogin', '_handleClickShowAdmin',
-                '_handleClickPayout', '_handleClickInvoice', '_handleClickDonate');
+                '_handleClickPayout', '_handleClickInvoice', '_handleClickDonate',
+                '_handleAuthError');
 
-            console.log("initialize")
+            createjs.Sound.on("fileload", handleLoadComplete);
+            createjs.Sound.alternateExtensions = ["mp3"];
+            createjs.Sound.registerSound({src:"/ogg/touch.ogg", id:"sound"});
+            function handleLoadComplete(event) {
+                console.log("soundLoaded")
+               // createjs.Sound.play("sound");
+            }
 
             this.$el = $('div.info-block-container');
 
@@ -63,6 +71,7 @@
             this.views.gameFieldView = new GameModule.GameFieldView({
                 model : this.currentRoom
             });
+
             $('.game-field-container').append(this.views.gameFieldView.$el);
 
             // User Panel
@@ -82,6 +91,8 @@
             this.views.userCardView.listenTo(this.views.userCardView, 'click-admin-settings', this._handleClickShowAdmin);
             this.views.userCardView.listenTo(this.views.userCardView, 'click-invoice', this._handleClickInvoice);
             this.views.userCardView.listenTo(this.views.userCardView, 'click-payout', this._handleClickPayout);
+            this.currentUser.listenTo(this.currentUser, 'auth-error', this._handleAuthError);
+     //
 
             this.views.topView = new ViewsModule.TopView({
                 collection : this.topCollection,
@@ -92,8 +103,12 @@
                 height : 240
             });
 
-            this.views.signInView = new ViewsModule.LoginBlockView({});
-            this.views.signUpView = new ViewsModule.SignBlockView({});
+            this.views.signInView = new ViewsModule.LoginBlockView({
+                model : this.currentUser
+            });
+            this.views.signUpView = new ViewsModule.SignBlockView({
+                model : this.currentUser
+            });
 
             this.views.signInView.$el.hide();
             this.views.signUpView.$el.hide();
@@ -164,7 +179,6 @@
             this.$el.append(this.views.adminView.$el);
             this.$el.append(this.views.profileView.$el);
 
-
             this.views.adminView.$el.hide();
 
             this.currentRoom.listenTo(this.currentRoom, 'change:players', function() {
@@ -185,6 +199,7 @@
                 collection : this.notifyCollection
             });
 
+
             $('body').append(this.views.notifyView.$el);
 
             this.currentRoom.listenTo(this.currentRoom, 'UserBalanceUpdated', function() {
@@ -192,11 +207,12 @@
             }.bind(this));
 
             this.currentRoom.listenTo(this.currentRoom, 'spawnMob', function() {
-                this.notifyCollection.add({ message: { text: 'Появилась новая фигура' } });
+                this.notifyCollection.add({ message: 'Появилась новая фигура' });
             }.bind(this));
 
             this.currentRoom.listenTo(this.currentRoom, 'removeMob', function() {
-                this.notifyCollection.add({ message: { text: 'Фигура удалена' } });
+                createjs.Sound.play("sound");
+                this.notifyCollection.add({ message: 'Фигура удалена' });
             }.bind(this));
 
             this.currentRoom.listenTo(this.currentRoom, 'ErrorMessage', function(message) {
@@ -204,7 +220,7 @@
                     "NotMoney" : "Не хватает денег, пополните ваш баланс!"
                 };
                 var _msg = _errDictionary[message];
-                this.notifyCollection.add({ message: { text: _msg === undefined ? message : _msg }, type : 'danger' });
+                this.notifyCollection.add({ message: _msg === undefined ? message : _msg, type : 'danger' });
             }.bind(this));
 
             this.currentUser.fetch({
@@ -217,6 +233,16 @@
                     this.currentRoom.fetch();
                 }.bind(this)
             });
+        },
+
+        _handleAuthError: function(error) {
+            var _errDictionary = {
+                "UserNotFound" : "Пользователь c указанным email не найден! Зарегистрируйтесь чтобы войти!",
+                "InvalidPassword" : "Неверный пароль или email",
+                "AlreadyTaken" : "Пользователь c указанным email уже зарегистрирован!"
+            };
+            var _msg = _errDictionary[error];
+            this.notifyCollection.add({ message: _msg === undefined ? "Ошибка при аутентификации!" : _msg, type : 'danger' });
         },
 
         _handleUserLogOut: function() {

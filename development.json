@@ -1,0 +1,53 @@
+[
+  {
+    "uid": "bubbles-user",
+    "append": true,
+    "script": "bin/www.js",
+    "sourceDir": "./app/server",
+    "args" : [
+      "--service", "user",
+      "--port", "4005"
+    ]
+  },
+  {
+    "uid": "bubbles-rooms",
+    "append": true,
+    "script": "bin/www.js",
+    "sourceDir": "./app/server",
+    "args" : [
+      "--service", "rooms",
+      "--port", "4004"
+    ]
+  },
+  {
+    "uid": "bubbles-accounting",
+    "append": true,
+    "script": "bin/www.js",
+    "sourceDir": "./app/server",
+    "args" : [
+      "--service", "accounting",
+      "--port", "4001"
+    ]
+  },
+  {
+    "uid": "bubbles-auth",
+    "append": true,
+    "script": "bin/www.js",
+    "sourceDir": "./app/server",
+    "args" : [
+      "--service", "auth",
+      "--port", "4002"
+    ]
+  },
+  {
+    "uid": "bubbles-game",
+    "append": true,
+    "script": "bin/www.js",
+    "sourceDir": "./app/server",
+    "args" : [
+      "--service", "game",
+      "--port", "4100",
+      "--room", "571526540e1ea4be02c7683e"
+    ]
+  }
+]

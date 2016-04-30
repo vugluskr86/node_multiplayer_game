@@ -1,6 +1,8 @@
 var _ = require('underscore');
 var RoomModel = require('../models/room');
-var async = require('async');
+var async = require('async'),
+    log4js = require('../utils/log'),
+    log = log4js.getLogger();
 
 var Mob = require('./mob.js');
 var Client = require("./client.js");
@@ -52,84 +54,30 @@ const COLOR_pastel = [
     "#e1c4f4", "#f6c6e6"];
 
 
-
-function RoomMobs(id) {
-    this.id   = id;
-
-    this.mobs = [];
-    this.mobsOptions = [];
-
-    this.mobIdx = 0;
-}
-
-RoomMobs.prototype.spawnMobs = function(x,y,angle,options) {
-    this.mobIdx++;
-
-    var _mob = _.clone(options);
-    _.extend(_mob, { id : this.mobIdx });
-
-    var mob = new Mob(this.mobIdx, _mob, this.mobIdx);
-
-    mob.x = x;
-    mob.y = y;
-    mob.angle = angle;
-
-    this.mobsOptions.push(_mob);
-    this.mobs.push(mob);
-
-    mob.update(1/60);
-
-    return {
-        options : _mob,
-        data : mob
-    };
-};
-
-RoomMobs.prototype.removeMob = function(id) {
-    var mob_idx = _.findIndex(this.mobs, { id : id });
-    if( mob_idx !== -1 ) {
-        var mob = this.mobs[mob_idx];
-        this.mobs.splice(mob_idx, 1);
-        var opt_idx = _.findIndex(this.mobsOptions, { id : mob.optionId });
-        if( opt_idx !== -1 ) {
-            this.mobsOptions.splice(opt_idx, 1);
-
-            return true;
-        }
-    }
-
-    return false;
-};
-
-RoomMobs.prototype.findMob = function(id) {
-    var mob_idx = _.findIndex(this.mobs, { id : id });
-    if( mob_idx !== -1 ) {
-        var mob = this.mobs[mob_idx];
-        var opt_idx = _.findIndex(this.mobsOptions, { id : mob.optionId });
-        if( opt_idx !== -1 ) {
-            return this.mobsOptions[opt_idx];
-        }
-    }
-};
-
-
-
-function Room(id) {
-    this.id = id;
-    this.mobs = new RoomMobs(id);
-
+function Room(options) {
+    this.id      = options._id;
+    this.mobs    = [];
     this.clients = [];
-    this.clientIdx = 0;
+    this.timer   = 0;
 
-    this.timer = 0;
+    this.options = options;
+
+    this.randSeq = [];
+
+    for(var i = 0; i < this.options.percent_profit; i++) {
+        this.randSeq.push(1);
+    }
+    for(var j = 0; j < this.options.percent_null; j++) {
+        this.randSeq.push(0);
+    }
+    for(var q = 0; q < this.options.percent_minus; q++) {
+        this.randSeq.push(-1);
+    }
 }
 
 Room.prototype.addClient = function(ws, user) {
-    var client = new Client(this.clientIdx, ws, user, this);
-
+    var client = new Client(ws, user, this);
     this.clients.push( client );
-    this.clientIdx++;
-
     return client;
 };
 
@@ -141,126 +89,48 @@ Room.prototype.removeClient = function(player) {
     }
 };
 
-Room.prototype.getClient = function(id) {
-    var index =  _.findIndex(this.clients, { id : id });
-    if( index !== -1 ) {
-        return this.clients[index];
+Room.prototype.addMobs = function(mobs_options) {
+    mobs_options.forEach(this.addMob.bind(this));
+};
+
+Room.prototype.addMob = function(mob_option) {
+    var updateIndex = _.findIndex(this.mobs, { id : mob_option.id });
+    if( updateIndex === -1 ) {
+        this.mobs.push( new Mob(mob_option) );
+    } else {
+        this.mobs[updateIndex].setOptions(mob_option);
     }
 };
 
-Room.prototype.load = function(callback) {
-    return RoomModel.findOne({ _id : this.id }).exec(function(err, room) {
-        if( err ) {
-            return callback(err);
-        }
-
-        if( !room ) {
-            return callback("undefinedRoom");
-        }
-
-        this.roomData = room;
-        this.roomData.mobs = 0;
-        // this.roomData.percent_profit
-        // this.roomData.percent_null
-        // this.roomData.percent_minus
-
-        this.randSeq = [];
-
-        for(var i = 0; i < this.roomData.percent_profit; i++) {
-            this.randSeq.push(1);
-        }
-        for(var j = 0; j < this.roomData.percent_null; j++) {
-            this.randSeq.push(0);
-        }
-        for(var q = 0; q < this.roomData.percent_minus; q++) {
-            this.randSeq.push(-1);
-        }
-
-        // console.log(this.randSeq.length)
-
-
-        this.roomData.save(function(err){
-            if( err ) {
-                return callback(err);
-            }
-
-            this.roomInterval = setInterval(this.update.bind(this, 1000 / 60), 1000 / 60);
-            this.spawnInterval = setInterval(this.workSpawn.bind(this), this.roomData.spawnSpeed * 1000);
-
-            return callback(null);
-        }.bind(this));
-
-    }.bind(this));
-};
-
-Room.prototype.workSpawn = function() {
-    if( this.roomData.maxMobs > this.roomData.mobs ) {
-
-        if( this.spawnInterval ) {
-            clearInterval( this.spawnInterval );
-            this.spawnInterval = null;
-        }
-
-        this.roomData.mobs += 1;
-        this.roomData.save(function(err) {
-            if(err) {
-                console.log("Error save room");
-            }
-
-            var mob = this.spawnMob();
-
-            this.broadcast(JSON.stringify({
-                id : "spawnMob",
-                data : mob
-            }));
-
-            if(!err && !this.spawnInterval) {
-                this.spawnInterval = setInterval(this.workSpawn.bind(this), this.roomData.spawnSpeed * 1000);
-            }
-        }.bind(this));
-
+Room.prototype.findMob = function(id) {
+    var updateIndex = _.findIndex(this.mobs, { id : id });
+    if( updateIndex !== -1 ) {
+        return this.mobs[updateIndex];
     }
 };
 
-Room.prototype.updateInfo = function(room) {
-    Object.keys(room).forEach(function(propKey) {
-        if( propKey !== 'id' ) {
-            this.roomData[propKey] = room[propKey];
-        }
-    }.bind(this));
-
-    this.broadcast(JSON.stringify({
-        id : "updateRoomData",
-        data : this.roomData
-    }));
+Room.prototype.removeMob = function(mob_option) {
+    var removeIndex = _.findIndex(this.mobs, { id : mob_option.id });
+    if( removeIndex !== -1 ) {
+        this.mobs.splice(removeIndex, 1);
+    }
+    return removeIndex;
 };
 
-Room.prototype.update = function(dt) {
-    for(var mIndex = 0; mIndex < this.mobs.mobs.length; mIndex++) {
-        var mob = this.mobs.mobs[mIndex];
-        mob.update(dt);
-    }
-    /*
-    for(var cIndex = 0; cIndex < this.clients.length; cIndex++) {
-        var client = this.clients[cIndex];
-        if( client.ws.readyState == 1) {
-            client.updateMobsData();
-        }
-    }
-    */
+Room.prototype.updateOptions = function(options) {
+    this.options = options;
 };
 
 Room.prototype.broadcast = function(message) {
     for(var i = 0; i < this.clients.length; i++) {
         var client = this.clients[i];
         if( client.ws.readyState == 1) {
-            client.send(message)
+            client.send(message);
         }
     }
 };
 
-Room.prototype.spawnMob = function() {
-
+Room.prototype.getRandomMobOptions = function() {
     var _rand = _.random(0, 99),
         _profitMode = this.randSeq[_rand];
 
@@ -291,7 +161,18 @@ Room.prototype.spawnMob = function() {
         };
     }
 
-    return this.mobs.spawnMobs(_.random(-500, 500), _.random(-500, 500), _.random(0, 2 * Math.PI), {
+    var mob = {
+        x : _.random(-500, 500),
+        y : _.random(-500, 500),
+        angle : _.random(0, 2 * Math.PI),
+        center : { x : _.random(-1500, 1500),  y : _.random(-1500, 1500) },
+        speed : _.random(0.2, 0.8),
+        r_x :  _.random(-500, 500),
+        r_y :  _.random(-500, 500),
+        created : (new Date().getTime())
+    };
+
+    _.extend(mob,{
         text : _cost + "/" + _profit,
         prototype : {
             cost : _cost,
@@ -299,6 +180,137 @@ Room.prototype.spawnMob = function() {
             view : view
         }
     });
+
+    return mob;
 };
 
+Room.prototype.checkSpawnCondition = function() {
+    return this.options.maxMobs > this.mobs.length;
+};
+
+Room.prototype.getSpawnTimeout = function() {
+    return this.options.spawnSpeed * 1000;
+};
+
+
+
+/*
+// FIXME : Синхронный интерфейс для игры
+Room.prototype.removeMob = function(mob, callback) {
+    log.debug("removeMob",mob);
+    //console.log(mob)
+    this.mobs.removeMob(mob.id);
+
+    RoomModel.update({ _id : this.id }, { $pull : { mobs : { options : mob } } }, { safe: true }).exec(function(err, result) {
+        if( err ) {
+            return callback(err);
+        }
+        RoomModel.findOne({ _id : this.id }).exec(function(err, result) {
+            if( err ) {
+                return callback(err);
+            }
+
+            log.debug("roomData updated", result);
+
+            this.roomData = result;
+
+            return callback(null);
+        }.bind(this));
+    }.bind(this));
+};
+
+Room.prototype.load = function(callback) {
+    return RoomModel.findOne({ _id : this.id }).exec(function(err, room) {
+        if( err ) {
+            return callback(err);
+        }
+
+        if( !room ) {
+            return callback("undefinedRoom");
+        }
+
+        this.roomData = room;
+
+
+
+        // TODO : Loading mobs
+        this.mobs.mobIdx = this.roomData.mobs.length;
+
+        this.roomData.mobs.forEach(function(mob){
+            this.mobs.addMob(mob);
+        }.bind(this));
+
+
+        this.roomData.save(function(err){
+            if( err ) {
+                return callback(err);
+            }
+
+            this.roomInterval = setInterval(this.update.bind(this, 1000 / 60), 1000 / 60);
+            this.spawnInterval = setInterval(this.workSpawn.bind(this), this.roomData.spawnSpeed * 1000);
+
+            return callback(null);
+        }.bind(this));
+
+    }.bind(this));
+};
+
+Room.prototype.workSpawn = function() {
+    if( this.roomData.maxMobs > this.roomData.mobs.length ) {
+
+        log.debug("workSpawn", this.roomData.maxMobs, this.roomData.mobs.length);
+
+        if( this.spawnInterval ) {
+            clearInterval( this.spawnInterval );
+            this.spawnInterval = null;
+        }
+
+        // TODO : Save mob
+        var mob = this.spawnMob();
+
+        this.roomData.mobs.push(mob);
+
+        this.roomData.save(function(err) {
+            if(err) {
+                log.debug("Error save room");
+            }
+
+            this.broadcast(JSON.stringify({
+                id : "spawnMob",
+                data : mob
+            }));
+
+            if(!err && !this.spawnInterval) {
+                this.spawnInterval = setInterval(this.workSpawn.bind(this), this.roomData.spawnSpeed * 1000);
+            }
+        }.bind(this));
+    }
+};
+
+Room.prototype.updateInfo = function(room) {
+    Object.keys(room).forEach(function(propKey) {
+        if( propKey !== 'id' ) {
+            this.roomData[propKey] = room[propKey];
+        }
+    }.bind(this));
+
+    this.broadcast(JSON.stringify({
+        id : "updateRoomData",
+        data : this.roomData
+    }));
+};
+
+Room.prototype.update = function(dt) {
+    for(var mIndex = 0; mIndex < this.mobs.mobs.length; mIndex++) {
+        var mob = this.mobs.mobs[mIndex];
+        mob.update(dt);
+    }
+};
+
+
+
+
+
+
+*/
 module.exports = Room;

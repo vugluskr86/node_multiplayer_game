@@ -1,4 +1,4 @@
-var mongoose = require('mongoose');
+var mongoose = require('../utils/mongoose');
 var bcrypt   = require('bcrypt-nodejs');
 var _ = require('underscore');
 var mongoosePaginate = require('mongoose-paginate');
@@ -12,9 +12,8 @@ var AccountSchema = new  mongoose.Schema({
     valueAbs:   { type: Number, default: 0 },
     valueDelta: { type: Number, default: 0 },
     operation:  { type: String, required: true, enum: operations },
-    state:      { type: String, required: true, enum: states, default: 'request' },
-    created:    { type: Date, default : Date.now }
-});
+    state:      { type: String, required: true, enum: states, default: 'request' }
+}, { timestamps: { createdAt: 'created', updatedAt: 'updated' } });
 
 AccountSchema.statics.createPayout = function(options, callback) {
     var _m = new this;

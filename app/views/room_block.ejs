@@ -1,7 +1,7 @@
 <h4><%=room.name%></h4>
 <div>
     <span>Игроков: <span><%=room.players ? room.players.length : 0%></span></span>
-    <span>Фигур: <span><%=room.mobs ? room.mobs : 0%> из <%=room.maxMobs%></span></span>
+    <span>Фигур: <span><%=room.mobs.length ? room.mobs.length : 0%> из <%=room.maxMobs%></span></span>
 </div>
 <div class="btn-group btn-group-xs">
     <% if(room._current) { %>

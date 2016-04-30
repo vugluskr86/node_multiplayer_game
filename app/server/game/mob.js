@@ -1,44 +1,49 @@
 var _ = require('underscore');
 
-function Mob(id, options, optionId) {
-    this.x = 0;
-    this.y = 0;
-    this.angle = 0;
-    this.id = id;
-    this.optionId = optionId;
-    this.options = options;
-
-    this.center = {
+/**
+ this.center = {
         x : _.random(-1500, 1500),
         y : _.random(-1500, 1500)
     };
 
-    this.life = _.random(0, 2 * Math.PI);
-    this.speed = _.random(0.2, 0.8);
-    this.r_x = _.random(-500, 500);
-    this.r_y = _.random(-500, 500);
+ this.life = _.random(0, 2 * Math.PI);
+ this.speed = _.random(0.2, 0.8);
+ this.r_x = _.random(-500, 500);
+ this.r_y = _.random(-500, 500);
+ */
 
-    this._ditry = true;
+function Mob(options) {
+    this.id = options.id;
+
+    this.setOptions(options);
 }
 
-Mob.prototype.update = function(dt) {
-    this.x = this.center.x + Math.sin(this.life) * this.r_x * Math.sin(this.life);
-    this.y = this.center.y + Math.cos(this.life) * this.r_y * Math.sin(this.life);
-    this.life += dt / 1000 * this.speed;
+Mob.prototype.update = function(time) {
+    var distance = this.options.speed * ( this.options.created + time ) / 1000;
+
+    this.options.x = this.options.center.x + Math.sin(distance) * this.options.r_x * Math.sin(distance);
+    this.options.y = this.options.center.y + Math.cos(distance) * this.options.r_y * Math.sin(distance);
 };
 
-Mob.prototype.toJSON = function() {
-    return {
-        x : this.x,
-        y : this.y,
-        angle : this.angle,
-        id : this.id,
-        center : this.center,
-        life : this.life,
-        speed : this.speed,
-        r_x : this.r_x,
-        r_y: this.r_y
+Mob.prototype.setOptions = function(options) {
+    // physic
+    this.options = {
+        x : 0,
+        y : 0,
+        angle : 0,
+        center : { x : 0,  y : 0 },
+        speed : 0,
+        r_x : 0,
+        r_y : 0,
+        created : (new Date().getTime())
     };
+    _.extend(this.options, options || {});
 };
+
+
+Mob.prototype.toJSON = function() {
+    return this.options;
+};
+
 
 module.exports = Mob;

@@ -1,5 +1,7 @@
 var nconf = require('nconf'),
-    path = require('path');
+    path = require('path'),
+    log4js = require('../utils/log'),
+    log = log4js.getLogger();
 
 const DEAULT_CONFIG_NAME = "default";
 
@@ -20,7 +22,7 @@ var ResolveConfigName = function ResolveConfigName()
 
 var ConfigFile = ResolveConfigName();
 
-console.log('Use config: ', ConfigFile);
+log.log('Use config: ', ConfigFile);
 
 nconf.argv().env().file({ file : ConfigFile });
 
