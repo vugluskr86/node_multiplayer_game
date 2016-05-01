@@ -30,7 +30,7 @@
             createjs.Sound.alternateExtensions = ["mp3"];
             createjs.Sound.registerSound({src:"/ogg/touch.ogg", id:"sound"});
             function handleLoadComplete(event) {
-                console.log("soundLoaded")
+                console.log("soundLoaded");
                // createjs.Sound.play("sound");
             }
 
@@ -45,10 +45,10 @@
             this.currentRoom = new DataModule.RoomModel({
                 id : "571526540e1ea4be02c7683e"
             });
+
             this.notifyCollection = new Backbone.Collection();
 
             this.topCollection = new DataModule.TopCollection();
-
             this.topCollection.fetch({ reset : true });
 
             this.currentUser.listenTo(this.currentUser, 'on-login', this._handleUserLogin);

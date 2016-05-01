@@ -7,6 +7,8 @@
         require('underscore'),
         require('jquery'),
         require('backbone'),
+        require('backgrid'),
+
 
         require('table_view.ejs'),
         require('room_admin_block.ejs'),
@@ -22,7 +24,7 @@
         require('backbone-forms')
     );
 
-}(this, function (root, Module, _, $, Backbone,
+}(this, function (root, Module, _, $, Backbone, Backgrid,
                   table_view,
                   room_admin_block,
                   login_block,
@@ -31,7 +33,7 @@
                   room_block,
                   top_view,
                   admin_page_view,
-                  profile_view) {
+                  profile_view, BootStrapNotify, BackboneForm) {
     'use strict';
 
     var Table =  Backbone.View.extend({
@@ -614,7 +616,7 @@
                 };
 
                 this.invoicePage = new Table({
-                    head : {
+                    columns : {
                         created : {
                             name : "Время",
                             view : function(row, value) { return value; }
@@ -634,6 +636,7 @@
                     },
                     collection : this.invoices
                 });
+
 
                 this.payoutPage = new Table({
                     head : {
@@ -742,7 +745,34 @@
 
                 this.$el.html( this.template({}) );
 
+  //              this.invoicePage.render();
+
+/*
+                var paginator = new Backgrid.Extension.Paginator({
+
+                    // If you anticipate a large number of pages, you can adjust
+                    // the number of page handles to show. The sliding window
+                    // will automatically show the next set of page handles when
+                    // you click next at the end of a window.
+                    windowSize: 6, // Default is 10
+
+                    // Used to multiple windowSize to yield a number of pages to slide,
+                    // in the case the number is 5
+                    slideScale: 0.25, // Default is 0.5
+
+                    // Whether sorting should go back to the first page
+                    goBackFirstOnSort: false, // Default is true
+
+                    collection: this.invoices
+                });
+*/
+
                 this.$el.find('div#admin-invoices').append( this.invoicePage.$el );
+  //              this.$el.find('div#admin-invoices').append( paginator.render().el );
+
+
+
+
                 this.$el.find('div#admin-payouts').append( this.payoutPage.$el );
                 this.$el.find('div#admin-users').append( this.usersPage.$el );
                 this.$el.find('div#admin-settings').append( this.settingsPage.$el );

@@ -13,7 +13,19 @@ var AccountSchema = new  mongoose.Schema({
     valueDelta: { type: Number, default: 0 },
     operation:  { type: String, required: true, enum: operations },
     state:      { type: String, required: true, enum: states, default: 'request' }
-}, { timestamps: { createdAt: 'created', updatedAt: 'updated' } });
+
+    , created    : { type: Date }
+    , updated    : { type: Date }
+});
+
+AccountSchema.pre('save', function(next){
+    var now = new Date();
+    this.updated = now;
+    if ( !this.created ) {
+        this.created = now;
+    }
+    next();
+});
 
 AccountSchema.statics.createPayout = function(options, callback) {
     var _m = new this;
@@ -117,5 +129,6 @@ AccountSchema.statics.getMobTakesPage = function(query, options, callback) {
 
 
 AccountSchema.plugin(mongoosePaginate);
+
 
 module.exports = mongoose.model('Account', AccountSchema);

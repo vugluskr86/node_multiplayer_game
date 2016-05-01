@@ -17,9 +17,7 @@ module.exports = function(app, redisClient, mongoose, passport, callback) {
             }
 
             req.logIn(user, function(err) {
-
                 if (err) { return next(err); }
-
                 return res.json({});
             });
         })(req, res, next);

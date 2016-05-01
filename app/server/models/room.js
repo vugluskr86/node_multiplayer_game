@@ -1,8 +1,8 @@
 var mongoose = require('../utils/mongoose');
 var bcrypt   = require('bcrypt-nodejs');
+var mongoosePaginate = require('mongoose-paginate');
 
 var roomSchema = mongoose.Schema({
-
     name :  {type: String, default : 'Room'},
     complexity :  {type: String, default : 'simple'},
 
@@ -27,6 +27,37 @@ var roomSchema = mongoose.Schema({
     state : { type: String, default : "stop" },
     pid : { type: Number },
     port : { type: Number }
-}, { timestamps: { createdAt: 'created', updatedAt: 'updated' } });
+
+    , created    : { type: Date }
+    , updated    : { type: Date }
+});
+
+roomSchema.pre('save', function(next){
+    var now = new Date();
+    this.updated = now;
+    if ( !this.created ) {
+        this.created = now;
+    }
+    next();
+});
+
+roomSchema.statics.join = function(options, callback) {
+    var model = mongoose.model('Room'),
+        room_condition = { _id : options.roomid, players : { $nin : [ options.userid ] } },
+        room_update = { $push : { players : options.userid } };
+
+    model.update(room_condition, room_update).exec(callback);
+};
+
+roomSchema.statics.leave = function(options, callback) {
+    var model = mongoose.model('Room'),
+        room_condition = { _id : options.roomid, players : { $in : [ options.userid ] } },
+        room_update = { $pull : { players : options.userid } };
+
+    model.update(room_condition, room_update).exec(callback);
+};
+
+roomSchema.plugin(mongoosePaginate);
+
 
 module.exports = mongoose.model('Room', roomSchema);

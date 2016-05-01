@@ -17,107 +17,132 @@ Client.prototype.disconnect = function() {
 };
 
 Client.prototype.message = function(message) {
-    if( this.user && this.user.currentRoom && this.user.currentRoom.toString() === this.room.id.toString() ) {
-        var packet = JSON.parse(message);
-        if( packet && packet.action ) {
-            switch (packet.action) {
-                case "clickMob": {
 
-                    if( packet.id === undefined ) {
-                        this.send(JSON.stringify({
-                            id : "error",
-                            message : "UndefinedMobId"
-                        }));
-                        return;
-                    }
+    if( this.user ) {
 
-                    // получаем моба
-                    var mobObject = this.room.findMob(packet.id);
+        RoomModel.findOne({ _id : this.room.id, players : { $in : [this.user._id] }  }).exec(function(err, room) {
 
-                    if( mobObject === undefined ) {
-                        this.send(JSON.stringify({
-                            id : "error",
-                            message : "UndefinedMob"
-                        }));
-                        return;
-                    }
+            if(err) {
+                this.send(JSON.stringify({
+                    id : "error",
+                    message : "NotInRoom"
+                }));
+                return;
+            }
 
-                    var mob = mobObject.toJSON();
+            if(!room) {
+                this.send(JSON.stringify({
+                    id : "error",
+                    message : "NotInRoom"
+                }));
+                return;
+            }
 
-                    // проверяем наличие денег
-                    if( this.user.balance < mob.prototype.cost ) {
-                        this.send(JSON.stringify({
-                            id : "error",
-                            message : "NotMoney"
-                        }));
-                        return;
-                    }
+            var packet = JSON.parse(message);
+            if( packet && packet.action ) {
+                switch (packet.action) {
+                    case "clickMob": {
 
-                    if( this.room.removeMob(mob) !== -1 ) {
+                        if( packet.id === undefined ) {
+                            this.send(JSON.stringify({
+                                id : "error",
+                                message : "UndefinedMobId"
+                            }));
+                            return;
+                        }
 
-                        RoomModel.update(
-                            { _id : this.room.id },
-                            { $pull : { mobs : mob } },
-                            { safe: true }
-                        ).exec(function(err, result) {
+                        // получаем моба
+                        var mobObject = this.room.findMob(packet.id);
 
-                            if( err ) {
-                                this.send(JSON.stringify({
-                                    id : "error",
-                                    message : "UndefinedMob"
-                                }));
-                                return;
-                            }
+                        if( mobObject === undefined ) {
+                            this.send(JSON.stringify({
+                                id : "error",
+                                message : "UndefinedMob"
+                            }));
+                            return;
+                        }
 
-                            this.room.broadcast(JSON.stringify({ id : "removeMob", data : packet.id }));
+                        var mob = mobObject.toJSON();
 
-                            // производим расчеты с балансом
-                            var moneyProfit = parseInt(mob.prototype.cost / 100 * mob.prototype.profit);
-                            this.user.balance += moneyProfit;
+                        // проверяем наличие денег
+                        if( this.user.balance < mob.prototype.cost ) {
+                            this.send(JSON.stringify({
+                                id : "error",
+                                message : "NotMoney"
+                            }));
+                            return;
+                        }
 
-                            var history = new UserHistoryModel();
-                            history.user = this.user._id;
-                            history.room = this.user.currentRoom;
-                            history.mob = mob;
+                        if( this.room.removeMob(mob) !== -1 ) {
 
-                            // сохраниение пользователя и истории
-                            async.parallel([
-                                function(next) {
-                                    this.user.save(next)
-                                }.bind(this),
-                                function(next) {
-                                    history.save(next)
-                                }.bind(this)
-                            ], function(err, result) {
+                            RoomModel.update(
+                                { _id : this.room.id },
+                                { $pull : { mobs : mob } },
+                                { safe: true }
+                            ).exec(function(err, result) {
+
                                 if( err ) {
                                     this.send(JSON.stringify({
                                         id : "error",
-                                        message : "BalanceChangedError"
+                                        message : "UndefinedMob"
                                     }));
                                     return;
                                 }
-                                this.send(JSON.stringify({
-                                    id : "UserBalanceUpdated",
-                                    message : this.user.balance
-                                }));
+
+                                this.room.broadcast(JSON.stringify({ id : "removeMob", data : packet.id }));
+
+                                // производим расчеты с балансом
+                                this.user.balance += parseInt(mob.prototype.cost / 100 * mob.prototype.profit);
+
+                                var history = new UserHistoryModel();
+                                history.user = this.user._id;
+                                history.room = this.user.currentRoom;
+                                history.mob = mob;
+
+                                // сохраниение пользователя и истории
+                                async.parallel([
+                                    function(next) {
+                                        this.user.save(next)
+                                    }.bind(this),
+                                    function(next) {
+                                        history.save(next)
+                                    }.bind(this)
+                                ], function(err, result) {
+                                    if( err ) {
+                                        this.send(JSON.stringify({
+                                            id : "error",
+                                            message : "BalanceChangedError"
+                                        }));
+                                        return;
+                                    }
+                                    this.send(JSON.stringify({
+                                        id : "UserBalanceUpdated",
+                                        message : this.user.balance
+                                    }));
+                                }.bind(this));
+
+
+
                             }.bind(this));
-
-
-
-                        }.bind(this));
-                    } else {
-                        this.send(JSON.stringify({
-                            id : "error",
-                            message : "RemoveMobError"
-                        }));
-                        return;
+                        } else {
+                            this.send(JSON.stringify({
+                                id : "error",
+                                message : "RemoveMobError"
+                            }));
+                            return;
+                        }
+                        break;
                     }
-                    break;
                 }
             }
-        }
+        }.bind(this));
+
     } else {
         log.debug("Not In room")
+        this.send(JSON.stringify({
+            id : "error",
+            message : "NotInRoom"
+        }));
     }
 };
 

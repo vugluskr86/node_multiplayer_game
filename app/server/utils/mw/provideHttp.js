@@ -1,6 +1,7 @@
-module.exports = function provideHttp(res, err, result) {
-    if( err ) {
-        return res.status("404").json(err);
+var _ = require('underscore');
+module.exports = function provideHttp(req, res, next) {
+    if( res._result === undefined ) {
+        return next("Undefined provide data");
     }
-    return res.json(result);
+    return res.json( res._result );
 };

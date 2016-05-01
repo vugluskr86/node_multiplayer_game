@@ -37,6 +37,8 @@ const config = {
         APP_DIR + '/client/main.js'
     ],
 
+    alias : {},
+
     output: {
         path: BUILD_DIR,
         filename: 'bundle.js'
@@ -50,7 +52,9 @@ const config = {
             { test: /\.less$/, loader: "style!css!less" },
             { test: /\.css$/, loader: "style-loader!css-loader" },
             { test: /\.ejs$/, loader: "ejs-loader" },
-            { test : /bootstrap-notify/, loader : 'imports?underscore,jquery,bootstrap' }
+            { test : /bootstrap-notify/, loader : 'imports?underscore,jquery,bootstrap' },
+
+          //  { test : /backbone-forms/, loader : 'script!./node_modules/backbone-forms/distribution.amd/backbone-forms.min.js'}
         ]
     },
     plugins: [
@@ -69,7 +73,10 @@ const config = {
     resolve: {
         root: [ APP_DIR, APP_DIR + '/views'],
         modulesDirectories: ['node_modules'],
-        extensions: ['', '.webpack.js', '.web.js', '.js', '.jsx', '.json']
+        extensions: ['', '.webpack.js', '.web.js', '.js', '.jsx', '.json'],
+        alias : {
+            "backbone-forms" : path.resolve(__dirname, "node_modules/backbone-forms/distribution.amd/backbone-forms.js")
+        }
     },
 
     cache: DEBUG,

@@ -10,7 +10,6 @@ var userSchema = mongoose.Schema({
     displayName: {type: String},
     photo: {type: String, default: '/images/ph_avatar.jpg'},
     balance: {type: Number, default: 10000},
-    currentRoom: {type: mongoose.Schema.Types.ObjectId, ref: 'Room'},
     role: { type: String },
 
     ban: { type:Boolean , default: false},
@@ -45,7 +44,19 @@ var userSchema = mongoose.Schema({
         id           : String,
         displayName  : String
     }
-}, { timestamps: { createdAt: 'created', updatedAt: 'updated' } });
+
+    , created    : { type: Date }
+    , updated    : { type: Date }
+});
+
+userSchema.pre('save', function(next){
+    var now = new Date();
+    this.updated = now;
+    if ( !this.created ) {
+        this.created = now;
+    }
+    next();
+});
 
 userSchema.methods.generateHash = function(password) {
     return bcrypt.hashSync(password, bcrypt.genSaltSync(8), null);
@@ -56,6 +67,7 @@ userSchema.methods.validPassword = function(password) {
 };
 
 userSchema.plugin(mongoosePaginate);
+
 
 userSchema.statics.getPage = function(query, options, callback) {
     return mongoose.model('User').paginate(query, options, callback);
