@@ -75,6 +75,9 @@
             this.stage = new easeljs.Stage(this.canvas);
             this.stage.snapPixelsEnabled = true;
             this.stage.enableMouseOver();
+            this.stage.autoClear = false;
+
+            easeljs.Touch.enable(this.stage);
 
             this._initGrid();
 
@@ -96,6 +99,8 @@
             if( this.gridView ) {
 
                 var gfx = this.gridView.graphics;
+
+                console.log("_drawGrid", gfx)
 
                 gfx.clear();
 

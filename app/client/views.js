@@ -142,7 +142,7 @@
 
         initialize: function(options) {
 
-            _.bindAll(this, '_handleResizeWindow', '_handleClickClose');
+            _.bindAll(this, '_handleResizeWindow', '_handleClickClose', 'show', 'hide');
 
             this.options = {
                 width : 320,
@@ -158,13 +158,11 @@
 
         _handleResizeWindow: function() {
 
-            this.$el.css("min-width", this.options.width + "px");
-            this.$el.css("min-height", this.options.height + "px");
+           // this.$el.css("min-width", this.options.width + "px");
+           // this.$el.css("min-height", this.options.height + "px");
 
             var width  = this.$el.width() > 0 ? this.$el.width() : this.options.width;
             var height = this.$el.height() > 0 ? this.$el.height() : this.options.height;
-
-         //   console.log(width, height);
 
             switch (this.options.valign) {
                 case "top":
@@ -217,6 +215,14 @@
         _handleClickClose: function(e) {
             e.preventDefault();
 
+            this.$el.hide();
+        },
+
+        show: function() {
+            this.$el.show();
+        },
+
+        hide: function() {
             this.$el.hide();
         }
     });
@@ -336,7 +342,8 @@
 
         SignBlockView : WindowView.extend({
             events: {
-                "submit form" : "_handleSubmit"
+                "submit form" : "_handleSubmit",
+                "click a.link-need-login" : "_handleNeedLoginClick"
             },
 
             template : signup_block,
@@ -344,7 +351,8 @@
             initialize: function(options) {
                 this.__proto__.constructor.__super__.initialize.apply(this, arguments);
 
-                _.bindAll(this, 'render', '_handleSubmit');
+                _.bindAll(this, 'render', '_handleSubmit', '_handleNeedLoginClick');
+
 
                 this.render();
             },
@@ -362,7 +370,12 @@
                     $form.find('input[name="email"]').val(),
                     $form.find('input[name="password"]').val()
                 );
-            }
+            },
+
+            _handleNeedLoginClick: function(e) {
+                e.preventDefault();
+                this.trigger('login')
+            },
         }),
 
         UserCardView : WindowView.extend({
@@ -616,7 +629,7 @@
                 };
 
                 this.invoicePage = new Table({
-                    columns : {
+                    head : {
                         created : {
                             name : "Время",
                             view : function(row, value) { return value; }
@@ -889,7 +902,9 @@
 
                 this.invoices.create({
                     valueDelta : this.$el.find('div#profile-invoices').find('input.invoice').val()
-                })
+                }, { silent : true });
+
+                this.invoices.fetch({ reset : true });
             },
 
             _handleRequestPayout: function(e) {
@@ -897,7 +912,9 @@
 
                 this.payouts.create({
                     valueDelta : this.$el.find('div#profile-payouts').find('input.payout').val()
-                });
+                }, { silent : true });
+
+                this.payouts.fetch({ reset : true });
             }
         })
     };

@@ -35,7 +35,7 @@ module.exports = function (app, redisClient, mongoose, passport, callback) {
         var pages = {
             page : parseInt(req.query.page),
             limit : parseInt(req.query.limit),
-            select : 'id displayName photo balance role ban'
+            select : '_id displayName photo balance role ban'
         }, query = {};
 
         return UserModel.getPage(query, pages, function(err, result) {
@@ -52,7 +52,7 @@ module.exports = function (app, redisClient, mongoose, passport, callback) {
 
         return UserModel
             .findOne({ _id : req.params.id })
-            .select('id displayName photo balance role')
+            .select('_id displayName photo balance role')
             .exec(function(err, result) {
                 if( err ) { return next(err); }
                 res._result = result;
@@ -88,7 +88,7 @@ module.exports = function (app, redisClient, mongoose, passport, callback) {
 
         return UserModel
             .update({ _id : req.body._id }, { displayName : req.body.displayName })
-            .select('id displayName photo balance role')
+            .select('_id displayName photo balance role')
             .exec(function(err, result) {
                 if( err ) { return next(err); }
                 res._result = result;
@@ -100,7 +100,7 @@ module.exports = function (app, redisClient, mongoose, passport, callback) {
     app.get([ API_PREFIX + "top" ], function(req, res, next) {
         return UserModel
             .find({ })
-            .select('id displayName photo balance role')
+            .select('_id displayName photo balance role')
             .sort({ balance : -1 })
             .limit(6)
             .exec(function(err, result) {

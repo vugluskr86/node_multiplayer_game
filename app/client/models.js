@@ -16,11 +16,8 @@
     const API_PREFIX = "/api/v1/";
 
     var PaginatedCollection = Backbone.Collection.extend({
-        _filter : {
-            data : {}
-        },
         initialize: function(options) {
-            _.bindAll(this, 'parse', 'url', 'pageInfo', 'nextPage', 'previousPage', 'setFilter');
+            _.bindAll(this, 'parse', 'url', 'pageInfo', 'nextPage', 'previousPage');
             typeof(options) != 'undefined' || (options = {});
             this.page = 1;
             typeof(this.limit) != 'undefined' || (this.limit = 5);
@@ -34,6 +31,15 @@
                 self.trigger("fetched");
                 if(success) { success(self, resp); }
             };
+
+            if( this.filter ) {
+                _.extend(options, {
+                    data : {
+                        filter : this.filter
+                    }
+                });
+            }
+
             return Backbone.Collection.prototype.fetch.call(this, options);
         },
         parse: function(resp) {
@@ -75,7 +81,6 @@
         },
         nextPage: function(options) {
             var _opt = { reset : true };
-            _.extend(_opt, this._filter);
             _.extend(_opt, options || {});
             if (!this.pageInfo().next) {
                 return false;
@@ -85,7 +90,6 @@
         },
         previousPage: function(options) {
             var _opt = { reset : true };
-            _.extend(_opt, this._filter);
             _.extend(_opt, options || {});
 
             if (!this.pageInfo().prev) {
@@ -93,9 +97,6 @@
             }
             this.page = this.page - 1;
             return this.fetch(_opt);
-        },
-        setFilter:function (options) {
-            this._filter = options;
         }
     });
 
@@ -138,14 +139,9 @@
 
     var RoomModel = Backbone.Model.extend({
 
-        url : function() {
+        idAttribute : '_id',
 
-            if(this.isNew()) {
-                return API_PREFIX + "rooms";
-            }
-
-            return API_PREFIX + "rooms/" + this.id;
-        },
+        urlRoot : API_PREFIX + "rooms",
 
         _mobsCache : new MobsCollection(),
 
@@ -191,8 +187,18 @@
             });
         },
 
-        subscribe: function(roomId) {
-            this._connect(roomId);
+        subscribe: function() {
+            this._connect(this.get("_id"));
+        },
+
+        isUserInRoom: function(user) {
+            var players = this.get('players');
+
+            if(!players) {
+                throw "Not Initialized";
+            }
+
+            return players.indexOf(user.get("_id")) !== -1;
         },
 
         _handleUpdateMobs: function() {
@@ -205,33 +211,34 @@
                 switch (packet.id) {
                     case "fillRoom": {
                         this._mobsCache.reset(packet.data);
+                        this.set('mobs', this._mobsCache.toJSON());
                         break;
                     }
                     case "updateMobsData": {
                         this._mobsCache.add(packet.data, {merge: true});
+                        this.set('mobs', this._mobsCache.toJSON());
                         break;
                     }
                     case "removeMob": {
                         console.log(packet);
                         this._mobsCache.remove({ id : packet.data });
                         this.trigger('removeMob');
-                        this.fetch();
+                        this.set('mobs', this._mobsCache.toJSON());
                         break;
                     }
                     case "spawnMob" : {
                         this._mobsCache.add(packet.data);
                         this.trigger('spawnMob');
-                        this.fetch();
+                        this.set('mobs', this._mobsCache.toJSON());
                         break;
                     }
                     case "UserBalanceUpdated": {
-                        console.log(packet);
                         this.trigger('UserBalanceUpdated');
                         break;
                     }
                     case "updateRoom" : {
                         this._mobsCache.reset([]);
-                        this.fetch();
+                        this.set('mobs', this._mobsCache.toJSON());
                         break;
                     }
                     case "error": {
@@ -275,7 +282,6 @@
             this._connectState = 'CONNECTED';
         },
 
-
         click: function(mobId) {
             if( this._connectState === 'CONNECTED' ) {
                 this.socket.send(JSON.stringify({ action : "clickMob", id : mobId }));
@@ -299,7 +305,10 @@
         _auth : null,
 
         initialize : function() {
-            _.bindAll(this, 'isAuthenticated', 'isAuthenticatedAdmin', '_handleAuthStateChanged', 'ban', 'unban');
+            _.bindAll(this,
+                'isAuthenticated', 'isAuthenticatedAdmin', '_handleAuthStateChanged',
+                'ban', 'unban', 'bootstrap');
+
             this.listenTo(this, 'change', this._handleAuthStateChanged);
         },
 
@@ -376,6 +385,18 @@
                         return this.trigger('auth-error', data.err);
                     }
                     window.location.reload();
+                }.bind(this)
+            });
+        },
+
+        bootstrap: function() {
+            $.ajax({
+                url : "/api/v1/bootstrap",
+                dataType : 'json',
+                type : 'get',
+                success : function(data) {
+                    this.set(data);
+                    this.trigger('bootstrap');
                 }.bind(this)
             });
         }

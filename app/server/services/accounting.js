@@ -35,11 +35,15 @@ module.exports = function (app, redisClient, mongoose, passport, callback) {
             auth : true,
             page : true,
 
+            populate : {
+                path: 'userid',
+                select: '_id displayName photo balance role ban'
+            },
+
             filter: function(req) {
                 var _def = { operation : 'invoice' };
                 if(req.user.role === 'admin') {
-                    // fixme : filter from req.body
-                    var _ext = req.query.filter_userid !== undefined ? { userid : req.query.filter_userid } : {};
+                    var _ext = req.query.filter !== undefined ? req.query.filter : {};
                     _.extend(_def, _ext);
                 } else {
                     _.extend(_def, { userid : req.user._id });
@@ -88,11 +92,15 @@ module.exports = function (app, redisClient, mongoose, passport, callback) {
             auth : true,
             page : true,
 
+            populate : {
+                path: 'userid',
+                select: '_id displayName photo balance role ban'
+            },
+
             filter: function(req) {
                 var _def = { operation : 'payout' };
                 if(req.user.role === 'admin') {
-                    // fixme : filter from req.body
-                    var _ext = req.query.filter_userid !== undefined ? { userid : req.query.filter_userid } : {};
+                    var _ext = req.query.filter !== undefined ? req.query.filter : {};
                     _.extend(_def, _ext);
                 } else {
                     _.extend(_def, { userid : req.user._id });
@@ -179,59 +187,6 @@ module.exports = function (app, redisClient, mongoose, passport, callback) {
         }
     });
 
-
-    /*
-    app.post([ API_PREFIX + "payouts" ], isAuthenticated, function(req, res) {
-        var value = req.body.valueDelta !== undefined && !isNaN( parseInt(req.body.valueDelta) ) ? parseInt(req.body.valueDelta) : 100;
-
-        // проверяем что есть деньги
-        if( req.user.balance < value ) {
-            return provideHttp(res, "NotMoney");
-        }
-
-        // отнимаем деньги
-        req.user.balance -= value;
-        req.user.save(function(err) {
-            if(err) {
-                return provideHttp(res, "BalanceNotSaved");
-            }
-
-            return AccountModel.createPayout({
-                userid : req.user._id,
-                valueAbs : req.user.balance,
-                valueDelta : value
-            }, provideHttp.bind(null, res));
-        });
-    });
-
-
-    // Пагинация
-    app.get([ API_PREFIX + "payouts" ], isAuthenticated, function(req, res) {
-        var pages = {
-            page : parseInt(req.query.page),
-            limit : parseInt(req.query.limit),
-            populate: 'userid'
-        }, query = req.user.role === 'admin'
-            ? ( req.query.filter_userid !== undefined ? { userid : req.query.filter_userid } : {} )
-            : { userid : req.user._id };
-
-        return AccountModel.getPayoutsPage(query, pages, provideHttp.bind(null, res));
-    });
-
-
-
-    app.put([ API_PREFIX + "payouts/:id/reject" ], isAuthenticatedAdmin, function(req, res) {
-        return AccountModel.rejectPayout({ _id : req.params.id }, provideHttp.bind(null, res));
-    });
-
-    app.put([ API_PREFIX + "payouts/:id/close" ], isAuthenticatedAdmin, function(req, res) {
-        return AccountModel.closePayout({ _id : req.params.id }, provideHttp.bind(null, res));
-    });
-    */
-
-
-
-
     app._invoicesApi = new ensureApi(app, {
         name : "history",
         schema : UserHistoryModel,
@@ -242,11 +197,16 @@ module.exports = function (app, redisClient, mongoose, passport, callback) {
             auth : true,
             page : true,
 
+
+            populate : {
+                path: 'userid',
+                select: '_id displayName photo balance role ban'
+            },
+
             filter: function(req) {
                 var _def = {};
                 if(req.user.role === 'admin') {
-                    // fixme : filter from req.body
-                    _def = req.query.filter_userid !== undefined ? { user : req.query.filter_userid } : {};
+                    _def = req.query.filter !== undefined ? req.query.filter : {};
                 } else {
                     _def = { user : req.user._id };
                 }
@@ -257,23 +217,6 @@ module.exports = function (app, redisClient, mongoose, passport, callback) {
         add : false,
         update : false
     });
-
-/*
-    // Пагинация
-    app.get([ API_PREFIX + "history" ], isAuthenticated, function(req, res) {
-        var pages = {
-            page : parseInt(req.query.page),
-            limit : parseInt(req.query.limit),
-            populate: 'user'
-        }, query = req.user.role === 'admin'
-            ? ( req.query.filter_userid !== undefined ? { user : req.query.filter_userid } : {} )
-            : { user : req.user._id };
-
-        return UserHistoryModel.getPage(query, pages, provideHttp.bind(null, res));
-    });
-*/
-
-
 
     return callback(null, { createServer : true });
 };

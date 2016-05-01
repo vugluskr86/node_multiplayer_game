@@ -10,280 +10,295 @@
         require('./models'),
         require('./views'),
         require('./game'),
+        require('./sounds'),
         require('easeljs-loader!./libs/soundjs-0.6.2.combined.js')
     );
 
-}(this, function (root, Module, _, $, Backbone, DataModule, ViewsModule, GameModule) {
+}(this, function (root, Module, _, $, Backbone, DataModule, ViewsModule, GameModule, SoundManager) {
     'use strict';
+
+    const DEFAULT_ROOM_ID = "571526540e1ea4be02c7683e";
 
     var App = {
 
-        views : {},
-
         initialize : function() {
-            _.bindAll(this,
-                '_handleUserLogOut', '_handleUserLogin', '_handleClickShowAdmin',
-                '_handleClickPayout', '_handleClickInvoice', '_handleClickDonate',
-                '_handleAuthError');
 
-            createjs.Sound.on("fileload", handleLoadComplete);
-            createjs.Sound.alternateExtensions = ["mp3"];
-            createjs.Sound.registerSound({src:"/ogg/touch.ogg", id:"sound"});
-            function handleLoadComplete(event) {
-                console.log("soundLoaded");
-               // createjs.Sound.play("sound");
-            }
+            _.bindAll(this, '_handleUserAuthChanged', '_appendUI', '_handleChangeRoom', '_makeNotify');
+
+            SoundManager.initialize();
 
             this.$el = $('div.info-block-container');
 
-            var CurrentUserModel = DataModule.UserModel.extend({
-                url : "/api/v1/bootstrap"
-            });
+            this.user = new DataModule.UserModel();
+            this.user.on('change:auth', this._handleUserAuthChanged);
 
-            // Models
-            this.currentUser = new CurrentUserModel();
-            this.currentRoom = new DataModule.RoomModel({
-                id : "571526540e1ea4be02c7683e"
-            });
-
-            this.notifyCollection = new Backbone.Collection();
-
-            this.topCollection = new DataModule.TopCollection();
-            this.topCollection.fetch({ reset : true });
-
-            this.currentUser.listenTo(this.currentUser, 'on-login', this._handleUserLogin);
-            this.currentUser.listenTo(this.currentUser, 'on-logout', this._handleUserLogOut);
-
-            this.currentUser.listenTo(this.currentUser, 'change', function(){
-                this.topCollection.fetch({ reset : true });
+            this.user.listenTo(this.user, 'auth-error', function(error) {
+                var _errDictionary = {
+                    "UserNotFound" : "Пользователь c указанным email не найден! Зарегистрируйтесь чтобы войти!",
+                    "InvalidPassword" : "Неверный пароль или email",
+                    "AlreadyTaken" : "Пользователь c указанным email уже зарегистрирован!"
+                };
+                var _msg = _errDictionary[error];
+                this._makeNotify({ message: _msg === undefined ? "Ошибка при аутентификации!" : _msg, type : 'danger' });
             }.bind(this));
 
-            // filtered
-            this.payouts = new DataModule.PayoutCollection();
-            this.invoices = new DataModule.InvoiceCollection();
-            this.history = new DataModule.UserHistoryCollection();
+            this.user.bootstrap();
+        },
 
-            this.adminPayouts = new DataModule.PayoutCollection();
-            this.adminInvoices = new DataModule.InvoiceCollection();
-            this.adminUsers = new DataModule.UsersCollection();
+        _appendUI: function($el) {
+            this.$el.append($el);
+        },
 
-            // Game Field
-            this.views.gameFieldView = new GameModule.GameFieldView({
-                model : this.currentRoom
-            });
+        _makeNotify: function(message) {
+            if( this.notifyCollection ) {
+                this.notifyCollection.add(message);
+            }
+        },
 
-            $('.game-field-container').append(this.views.gameFieldView.$el);
+        _handleUserAuthChanged: function() {
+            console.log("_handleUserAuthChanged", this.user.toJSON());
 
-            // User Panel
-            this.views.userCardView = new ViewsModule.UserCardView({
-                model :  this.currentUser,
-                valign : 'top',
-                align : 'left',
-                margin : 4,
-                width : 160,
-                height : 240
-            });
+            if( !this.notifyCollection )
+            {
+                this.notifyCollection = new Backbone.Collection();
 
-            this.views.userCardView.$el.hide();
+                this.notifyView = new ViewsModule.NotifyView({
+                    collection : this.notifyCollection
+                });
+            }
 
-            this.$el.append(this.views.userCardView.$el);
+            if( this.user.isAuthenticated() ) {
 
-            this.views.userCardView.listenTo(this.views.userCardView, 'click-admin-settings', this._handleClickShowAdmin);
-            this.views.userCardView.listenTo(this.views.userCardView, 'click-invoice', this._handleClickInvoice);
-            this.views.userCardView.listenTo(this.views.userCardView, 'click-payout', this._handleClickPayout);
-            this.currentUser.listenTo(this.currentUser, 'auth-error', this._handleAuthError);
-     //
+                if( !this.userCardView ) {
 
-            this.views.topView = new ViewsModule.TopView({
-                collection : this.topCollection,
-                valign : 'top',
-                align : 'right',
-                margin : 4,
-                width : 160,
-                height : 240
-            });
+                    this.userCardView = new ViewsModule.UserCardView({
+                        model :  this.user,
+                        valign : 'top',
+                        align : 'left',
+                        margin : 4,
+                        width : 160,
+                        height : 240
+                    });
 
-            this.views.signInView = new ViewsModule.LoginBlockView({
-                model : this.currentUser
-            });
-            this.views.signUpView = new ViewsModule.SignBlockView({
-                model : this.currentUser
-            });
+                    this._appendUI(this.userCardView.$el);
 
-            this.views.signInView.$el.hide();
-            this.views.signUpView.$el.hide();
-            this.views.topView.$el.hide();
+                    this.userCardView.listenTo(this.userCardView, 'click-invoice click-payout', function() {
+                        if( this.profileView ) {
 
-            this.$el.append(this.views.signInView.$el);
-            this.$el.append(this.views.signUpView.$el);
-            this.$el.append(this.views.topView.$el);
+                            this.payouts.fetch({ reset : true });
+                            this.invoices.fetch({ reset : true });
+                            this.history.fetch({ reset : true });
 
-            this.views.signInView.listenTo(this.views.signInView, 'sign', function(){
-                this.views.signInView.$el.hide();
-                this.views.signUpView.$el.show();
-            }.bind(this));
+                            this.profileView.show();
+                        }
+                    }.bind(this));
 
-            this.views.adminView = new ViewsModule.AdminPage({
-                model : this.currentRoom,
-                valign : 'center',
-                align : 'center',
-                margin : 4,
-                width : 640,
-                height : 480,
-                payouts : this.adminPayouts,
-                invoices : this.adminInvoices,
-                users : this.adminUsers
-            });
+                    if( this.user.isAuthenticatedAdmin() ) {
+                        this.userCardView.listenTo(this.userCardView, 'click-admin-settings', function() {
+                            if( this.adminView ) {
 
-            this.views.profileView = new ViewsModule.ProfilePage({
-                model : this.currentUser,
-                valign : 'center',
-                align : 'center',
-                margin : 4,
-                width : 640,
-                height : 480,
-                payouts : this.payouts,
-                invoices : this.invoices,
-                history : this.history
-            });
+                                this.adminPayouts.fetch({ reset : true });
+                                this.adminInvoices.fetch({ reset : true });
+                                this.adminUsers.fetch({ reset : true });
 
-            this.views.joinRoomView = new ViewsModule.RoomView({
-                model : this.currentRoom,
-                userModel : this.currentUser,
-                valign : 'center',
-                align : 'center',
-                margin : 4,
-                width : 242,
-                height : 100
-            });
-
-            this.views.leaveRoomView = new ViewsModule.RoomView({
-                model : this.currentRoom,
-                userModel : this.currentUser,
-                valign : 'top',
-                align : 'center',
-                margin : 4,
-                width : 242,
-                height : 100
-            });
-
-            this.views.joinRoomView.listenTo(this.views.joinRoomView, 'click-donate', this._handleClickDonate);
-            this.views.leaveRoomView.listenTo(this.views.leaveRoomView, 'click-donate', this._handleClickDonate);
-
-            this.views.joinRoomView.$el.hide();
-            this.views.leaveRoomView.$el.hide();
-            this.views.profileView.$el.hide();
-
-            this.$el.append(this.views.joinRoomView.$el);
-            this.$el.append(this.views.leaveRoomView.$el);
-            this.$el.append(this.views.adminView.$el);
-            this.$el.append(this.views.profileView.$el);
-
-            this.views.adminView.$el.hide();
-
-            this.currentRoom.listenTo(this.currentRoom, 'change:players', function() {
-                var userid = this.currentUser.get('_id');
-                if( userid ) {
-                    this.currentRoom.subscribe('571526540e1ea4be02c7683e');
-                    if( this.currentRoom.get('players').indexOf(userid) !== -1  ) {
-                        this.views.leaveRoomView.$el.show();
-                        this.views.joinRoomView.$el.hide();
-                    } else {
-                        this.views.joinRoomView.$el.show();
-                        this.views.leaveRoomView.$el.hide();
+                                this.adminView.show();
+                            }
+                        }.bind(this));
                     }
                 }
-            }.bind(this));
 
-            this.views.notifyView = new ViewsModule.NotifyView({
-                collection : this.notifyCollection
-            });
+                if( !this.profileView ) {
 
+                    var PayoutCollection = DataModule.PayoutCollection.extend({
+                        filter : { userid : this.user.get("_id") }
+                    });
 
-            $('body').append(this.views.notifyView.$el);
+                    var InvoiceCollection = DataModule.InvoiceCollection.extend({
+                        filter : { userid : this.user.get("_id") }
+                    });
 
-            this.currentRoom.listenTo(this.currentRoom, 'UserBalanceUpdated', function() {
-                this.currentUser.fetch();
-            }.bind(this));
+                    var UserHistoryCollection = DataModule.UserHistoryCollection.extend({
+                        filter : { userid : this.user.get("_id") }
+                    });
 
-            this.currentRoom.listenTo(this.currentRoom, 'spawnMob', function() {
-                this.notifyCollection.add({ message: 'Появилась новая фигура' });
-            }.bind(this));
+                    this.payouts = new PayoutCollection();
+                    this.invoices = new InvoiceCollection();
+                    this.history = new UserHistoryCollection();
 
-            this.currentRoom.listenTo(this.currentRoom, 'removeMob', function() {
-                createjs.Sound.play("sound");
-                this.notifyCollection.add({ message: 'Фигура удалена' });
-            }.bind(this));
+                    this.profileView = new ViewsModule.ProfilePage({
+                        model : this.user,
+                        valign : 'center',
+                        align : 'center',
+                        margin : 4,
+                        width : 640,
+                        height : 480,
+                        payouts : this.payouts,
+                        invoices : this.invoices,
+                        history : this.history
+                    });
 
-            this.currentRoom.listenTo(this.currentRoom, 'ErrorMessage', function(message) {
-                var _errDictionary = {
-                    "NotMoney" : "Не хватает денег, пополните ваш баланс!"
-                };
-                var _msg = _errDictionary[message];
-                this.notifyCollection.add({ message: _msg === undefined ? message : _msg, type : 'danger' });
-            }.bind(this));
+                    this._appendUI(this.profileView.$el);
+                    this.profileView.hide();
+                }
 
-            this.currentUser.fetch({
-                success : function() {
+                if( !this.currentRoom ) {
+                    this.currentRoom = new DataModule.RoomModel({ _id : DEFAULT_ROOM_ID });
 
-                    this.payouts.setFilter({data : { filter_userid : this.currentUser.get("_id") }});
-                    this.invoices.setFilter({data : { filter_userid : this.currentUser.get("_id") }});
-                    this.history.setFilter({data : { filter_userid : this.currentUser.get("_id") }});
+                    if(!this.gameFieldView) {
+                        this.gameFieldView = new GameModule.GameFieldView({
+                            model : this.currentRoom
+                        });
 
-                    this.currentRoom.fetch();
-                }.bind(this)
-            });
+                        $('.game-field-container').append(this.gameFieldView.$el);
+                    }
+
+                    this.currentRoom.listenTo(this.currentRoom, 'change:players', this._handleChangeRoom);
+
+                    this.currentRoom.listenTo(this.currentRoom, 'UserBalanceUpdated', function() {
+                        this.user.fetch();
+                    }.bind(this));
+
+                    this.currentRoom.listenTo(this.currentRoom, 'spawnMob', function() {
+                        this._makeNotify({ message: 'Появилась новая фигура' });
+                        SoundManager.playSound("mobAdd");
+                    }.bind(this));
+
+                    this.currentRoom.listenTo(this.currentRoom, 'removeMob', function() {
+                        this._makeNotify({ message: 'Фигура удалена' });
+                        SoundManager.playSound("mobRemove");
+                    }.bind(this));
+
+                    this.currentRoom.listenTo(this.currentRoom, 'ErrorMessage', function(message) {
+                        var _errDictionary = {
+                            "NotMoney" : "Не хватает денег, пополните ваш баланс!",
+                            "NotInRoom" : "Для того чтобы войти в комнату, нажмите `Играть`"
+                        };
+                        var _msg = _errDictionary[message];
+                        this._makeNotify({ message: _msg === undefined ? message : _msg, type : 'danger' });
+                    }.bind(this));
+                }
+
+                if( this.user.isAuthenticatedAdmin() && !this.adminView ) {
+
+                    this.adminPayouts = new DataModule.PayoutCollection();
+                    this.adminInvoices = new DataModule.InvoiceCollection();
+                    this.adminUsers = new DataModule.UsersCollection();
+
+                    this.adminView = new ViewsModule.AdminPage({
+                        model : this.currentRoom,
+                        valign : 'center',
+                        align : 'center',
+                        margin : 4,
+                        width : 640,
+                        height : 480,
+                        payouts : this.adminPayouts,
+                        invoices : this.adminInvoices,
+                        users : this.adminUsers
+                    });
+
+                    this._appendUI(this.adminView.$el);
+                    this.adminView.hide();
+                }
+
+                if( !this.joinRoomView ) {
+                    this.joinRoomView = new ViewsModule.RoomView({
+                        model : this.currentRoom,
+                        userModel : this.user,
+                        valign : 'center',
+                        align : 'center',
+                        margin : 4,
+                        width : 242,
+                        height : 100
+                    });
+                    this._appendUI(this.joinRoomView.$el);
+                    this.joinRoomView.hide();
+
+                    this.joinRoomView.listenTo(this.joinRoomView, 'click-donate', function() {
+                        this.profileView.show();
+                    }.bind(this));
+                }
+
+                if( !this.leaveRoomView ) {
+                    this.leaveRoomView = new ViewsModule.RoomView({
+                        model : this.currentRoom,
+                        userModel : this.user,
+                        valign : 'top',
+                        align : 'center',
+                        margin : 4,
+                        width : 242,
+                        height : 100
+                    });
+                    this._appendUI(this.leaveRoomView.$el);
+                    this.leaveRoomView.hide();
+
+                    this.leaveRoomView.listenTo(this.leaveRoomView, 'click-donate', function() {
+                        this.profileView.show();
+                    }.bind(this))
+                }
+
+                if( !this.topCollection ) {
+                    this.topCollection = new DataModule.TopCollection();
+
+                    this.topView = new ViewsModule.TopView({
+                        collection : this.topCollection,
+                        valign : 'top',
+                        align : 'right',
+                        margin : 4,
+                        width : 160,
+                        height : 240
+                    });
+
+                    this._appendUI(this.topView.$el);
+                    this.topView.hide();
+
+                    this.topCollection.listenTo(this.topCollection, 'reset change', function(){
+                        this.topView.show();
+                    }.bind(this));
+                }
+
+                this.currentRoom.subscribe();
+                this.currentRoom.fetch();
+                this.topCollection.fetch({ reset : true });
+
+            } else {
+
+                if(!this.signInView) {
+                    this.signInView = new ViewsModule.LoginBlockView({
+                        model : this.user
+                    });
+                    this._appendUI(this.signInView.$el);
+                    this.signInView.show();
+
+                    this.signInView.listenTo(this.signInView, 'sign', function(){
+                        this.signInView.hide();
+                        this.signUpView.show();
+                    }.bind(this));
+                }
+
+                if(!this.signUpView) {
+                    this.signUpView = new ViewsModule.SignBlockView({
+                        model : this.user
+                    });
+                    this._appendUI(this.signUpView.$el);
+                    this.signUpView.hide();
+                    this.signUpView.listenTo(this.signUpView, 'login', function(){
+                        this.signUpView.hide();
+                        this.signInView.show();
+                    }.bind(this));
+                }
+            }
         },
 
-        _handleAuthError: function(error) {
-            var _errDictionary = {
-                "UserNotFound" : "Пользователь c указанным email не найден! Зарегистрируйтесь чтобы войти!",
-                "InvalidPassword" : "Неверный пароль или email",
-                "AlreadyTaken" : "Пользователь c указанным email уже зарегистрирован!"
-            };
-            var _msg = _errDictionary[error];
-            this.notifyCollection.add({ message: _msg === undefined ? "Ошибка при аутентификации!" : _msg, type : 'danger' });
-        },
+        _handleChangeRoom: function() {
+            console.log("_handleChangeRoom", this.currentRoom.toJSON());
 
-        _handleUserLogOut: function() {
-            this.views.signInView.$el.show();
-        },
-
-        _handleUserLogin: function() {
-            this.views.topView.$el.show();
-            this.views.userCardView.$el.show();
-        },
-
-        _handleClickShowAdmin: function() {
-            this.views.adminView.$el.show();
-
-            this.adminPayouts.fetch({ reset : true });
-            this.adminInvoices.fetch({ reset : true });
-            this.adminUsers.fetch({ reset : true });
-        },
-
-        _handleClickInvoice: function() {
-            this.views.profileView.$el.show();
-
-            this.payouts.fetch({ reset : true });
-            this.invoices.fetch({ reset : true });
-            this.history.fetch({ reset : true });
-        },
-
-        _handleClickPayout:function() {
-            this.views.profileView.$el.show();
-
-            this.payouts.fetch({ data : { filter_userid : this.currentUser.get("_id") }, reset : true });
-            this.invoices.fetch({ data : { filter_userid : this.currentUser.get("_id") }, reset : true });
-            this.history.fetch({ data : { filter_userid : this.currentUser.get("_id") }, reset : true });
-        },
-
-        _handleClickDonate: function() {
-            this.views.profileView.$el.show();
-
-            this.payouts.fetch({ data : { filter_userid : this.currentUser.get("_id") }, reset : true });
-            this.invoices.fetch({ data : { filter_userid : this.currentUser.get("_id") }, reset : true });
-            this.history.fetch({ data : { filter_userid : this.currentUser.get("_id") }, reset : true });
+            if( this.currentRoom.isUserInRoom(this.user) ) {
+                this.leaveRoomView.show();
+                this.joinRoomView.hide();
+            } else {
+                this.joinRoomView.show();
+                this.leaveRoomView.hide();
+            }
         }
     };
 

@@ -1,5 +1,10 @@
 module.exports = function(app, redisClient, mongoose, passport, callback) {
 
+    var _ = require("underscore"),
+        log4js = require('../utils/log'),
+        log = log4js.getLogger();
+
+
     var express = require('express');
     var path = require('path');
     var flash = require('connect-flash');
@@ -55,6 +60,12 @@ module.exports = function(app, redisClient, mongoose, passport, callback) {
         passport.authenticate('vkontakte', { failureRedirect: '/' }),
         function(req, res) {
             res.redirect('/');
+        });
+
+    app.post('/api/v1/errors',
+        function(req, res) {
+            log.debug(req.body);
+            res.end();
         });
 
     return callback(null, { createServer : true });

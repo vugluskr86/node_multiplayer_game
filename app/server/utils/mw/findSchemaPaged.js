@@ -23,7 +23,14 @@ module.exports = function findSchemaPaged(options, req, res, next) {
         page_options.limit = 1;
     }
 
-    console.log(options.options, page_options)
+    if( options.populate ) {
+        _.extend(page_options, { populate : options.populate });
+    }
+
+
+
+
+//    console.log(options.options, page_options)
 
     options.schema.paginate(options.condition, page_options, function(err, result) {
         if( err ) { return next(err); }

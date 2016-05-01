@@ -39,6 +39,9 @@ Client.prototype.message = function(message) {
             }
 
             var packet = JSON.parse(message);
+
+            log.debug(packet);
+
             if( packet && packet.action ) {
                 switch (packet.action) {
                     case "clickMob": {
@@ -88,6 +91,8 @@ Client.prototype.message = function(message) {
                                     }));
                                     return;
                                 }
+
+                                log.debug({ id : "removeMob", data : packet.id });
 
                                 this.room.broadcast(JSON.stringify({ id : "removeMob", data : packet.id }));
 

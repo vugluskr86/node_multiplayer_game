@@ -78,7 +78,8 @@ module.exports.ensureApi = function ensureApi(app, options) {
         var _findOneWrapper = function(req, res, next) {
             findOneSchema({
                 schema : this.options.schema,
-                condition : { _id : new mongoose.Types.ObjectId(req.params.id) }
+                condition : { _id : new mongoose.Types.ObjectId(req.params.id) },
+                populate : this.options.one.populate
             }, req, res, next);
         }.bind(this);
 
@@ -117,7 +118,6 @@ module.exports.ensureApi = function ensureApi(app, options) {
                 _conditionPage = checkRequestCondition(req, this.options.many.page, {});
             if( _conditionPage ) {
                 page = {};
-
                 _.extend(page, _conditionPage);
                 _.extend(page,
                     filterKeys(req.query,
@@ -128,18 +128,18 @@ module.exports.ensureApi = function ensureApi(app, options) {
                     ) || {});
             }
 
-         //   console.log(condition)
-
             if( page ) {
                 findSchemaPaged({
                     schema : this.options.schema,
                     condition : condition,
-                    options : page
+                    options : page,
+                    populate : this.options.many.populate
                 }, req, res, next);
             } else {
                 findSchema({
                     schema : this.options.schema,
-                    condition : condition
+                    condition : condition,
+                    populate : this.options.many.populate
                 }, req, res, next);
             }
 
